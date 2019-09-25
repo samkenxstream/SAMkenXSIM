@@ -40,7 +40,7 @@ using namespace simdjson::arm64;
 
 template <>
 struct simd_input<Architecture::ARM64> {
-  const uint8x16_t chunks[4];
+  uint8x16_t chunks[4];
 
   really_inline simd_input()
     : chunks{uint8x16_t(), uint8x16_t(), uint8x16_t(), uint8x16_t() } {}

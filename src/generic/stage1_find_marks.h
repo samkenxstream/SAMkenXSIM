@@ -166,8 +166,37 @@ static const size_t STEP_SIZE = 128;
 // available capacity with just one input. Running 2 at a time seems to give the CPU a good enough
 // workout.
 //
+really_inline void find_structural_bits_start(
+  const uint8_t *buf,
+  simd_input<ARCHITECTURE> &in
+) {
+  in = simd_input<ARCHITECTURE>(buf);
+}
+
+really_inline void find_structural_bits_middle(
+  simd_input<ARCHITECTURE> in,
+  uint64_t &prev_escaped, uint64_t &prev_in_string, uint64_t &prev_primitive,
+  uint64_t &string, uint64_t &structurals
+) {
+  string = find_strings(in, prev_escaped, prev_in_string);
+  structurals = find_potential_structurals(in, prev_primitive);
+}
+
+really_inline void find_structural_bits_end(
+  simd_input<ARCHITECTURE> in, uint64_t idx, uint64_t string, uint64_t structurals,
+  uint32_t *&base_ptr, uint64_t &prev_structurals, utf8_checker<ARCHITECTURE> &utf8_state,
+  uint64_t &unescaped_chars_error
+) {
+  uint64_t unescaped = in.lteq(0x1F);
+  utf8_state.check_next_input(in);
+  flatten_bits(base_ptr, idx, prev_structurals); // Output *last* iteration's structurals to ParsedJson
+  prev_structurals = structurals & ~string;
+  unescaped_chars_error |= unescaped & string;
+  idx += 64;
+}
+
 really_inline void find_structural_bits_128(
-    const uint8_t *buf, const size_t idx, uint32_t *&base_ptr,
+    const uint8_t *buf, size_t &idx, uint32_t *&base_ptr,
     uint64_t &prev_escaped, uint64_t &prev_in_string,
     uint64_t &prev_primitive,
     uint64_t &prev_structurals,
@@ -176,8 +205,9 @@ really_inline void find_structural_bits_128(
   //
   // Load up all 128 bytes into SIMD registers
   //
-  simd_input<ARCHITECTURE> in_1(buf);
-  simd_input<ARCHITECTURE> in_2(buf+64);
+  simd_input<ARCHITECTURE> in_1, in_2;
+  find_structural_bits_start(buf, in_1);
+  find_structural_bits_start(buf+64, in_2);
 
   //
   // Find the strings and potential structurals (operators / primitives).
@@ -185,27 +215,18 @@ really_inline void find_structural_bits_128(
   // This will include false structurals that are *inside* strings--we'll filter strings out
   // before we return.
   //
-  uint64_t string_1 = find_strings(in_1, prev_escaped, prev_in_string);
-  uint64_t structurals_1 = find_potential_structurals(in_1, prev_primitive);
-  uint64_t string_2 = find_strings(in_2, prev_escaped, prev_in_string);
-  uint64_t structurals_2 = find_potential_structurals(in_2, prev_primitive);
+  uint64_t string_1, structurals_1, string_2, structurals_2;
+  find_structural_bits_middle(in_1, prev_escaped, prev_in_string, prev_primitive, string_1, structurals_1);
+  find_structural_bits_middle(in_2, prev_escaped, prev_in_string, prev_primitive, string_2, structurals_2);
 
   //
   // Do miscellaneous work while the processor is busy calculating strings and structurals.
   //
   // After that, weed out structurals that are inside strings and find invalid string characters.
   //
-  uint64_t unescaped_1 = in_1.lteq(0x1F);
-  utf8_state.check_next_input(in_1);
-  flatten_bits(base_ptr, idx, prev_structurals); // Output *last* iteration's structurals to ParsedJson
-  prev_structurals = structurals_1 & ~string_1;
-  unescaped_chars_error |= unescaped_1 & string_1;
-
-  uint64_t unescaped_2 = in_2.lteq(0x1F);
-  utf8_state.check_next_input(in_2);
-  flatten_bits(base_ptr, idx+64, prev_structurals); // Output *last* iteration's structurals to ParsedJson
-  prev_structurals = structurals_2 & ~string_2;
-  unescaped_chars_error |= unescaped_2 & string_2;
+  find_structural_bits_end(in_1, idx, string_1, structurals_1, base_ptr, prev_structurals, utf8_state, unescaped_chars_error);
+  find_structural_bits_end(in_2, idx+64, string_2, structurals_2, base_ptr, prev_structurals, utf8_state, unescaped_chars_error);
+  idx += 128;
 }
 
 int find_structural_bits(const uint8_t *buf, size_t len, simdjson::ParsedJson &pj) {
@@ -214,6 +235,9 @@ int find_structural_bits(const uint8_t *buf, size_t len, simdjson::ParsedJson &p
               << pj.byte_capacity << " bytes but you are trying to process "
               << len << " bytes" << std::endl;
     return simdjson::CAPACITY;
+  }
+  if (unlikely(len == 0)) {
+    return simdjson::EMPTY;
   }
   uint32_t *base_ptr = pj.structural_indexes;
   utf8_checker<ARCHITECTURE> utf8_state;
@@ -230,29 +254,28 @@ int find_structural_bits(const uint8_t *buf, size_t len, simdjson::ParsedJson &p
   // CPU capacity while the next iteration is busy with an expensive clmul in compute_quote_mask.
   uint64_t structurals = 0;
 
-  size_t lenminusstep = len < STEP_SIZE ? 0 : len - STEP_SIZE;
+  size_t last_buf_size = (len % STEP_SIZE == 0) ? STEP_SIZE : (len % STEP_SIZE);
+  const uint8_t *last_buf = buf + len - last_buf_size;
   size_t idx = 0;
   // Errors with unescaped characters in strings (ASCII codepoints < 0x20)
   uint64_t unescaped_chars_error = 0;
 
-  for (; idx < lenminusstep; idx += STEP_SIZE) {
-    find_structural_bits_128(&buf[idx], idx, base_ptr,
+  while (buf < last_buf) {
+    find_structural_bits_128(buf, idx, base_ptr,
                              prev_escaped, prev_in_string, prev_primitive,
                              structurals, unescaped_chars_error, utf8_state);
+    buf += 128;
   }
 
   /* If we have a final chunk of less than 64 bytes, pad it to 64 with
    * spaces  before processing it (otherwise, we risk invalidating the UTF-8
    * checks). */
-  if (likely(idx < len)) {
-    uint8_t tmp_buf[STEP_SIZE];
-    memset(tmp_buf, 0x20, STEP_SIZE);
-    memcpy(tmp_buf, buf + idx, len - idx);
-    find_structural_bits_128(&tmp_buf[0], idx, base_ptr,
-                             prev_escaped, prev_in_string, prev_primitive,
-                             structurals, unescaped_chars_error, utf8_state);
-    idx += STEP_SIZE;
-  }
+  uint8_t tmp_buf[STEP_SIZE];
+  memset(tmp_buf, 0x20, STEP_SIZE);
+  memcpy(tmp_buf, last_buf, last_buf_size);
+  find_structural_bits_128(&tmp_buf[0], idx, base_ptr,
+                            prev_escaped, prev_in_string, prev_primitive,
+                            structurals, unescaped_chars_error, utf8_state);
 
   /* finally, flatten out the remaining structurals from the last iteration */
   flatten_bits(base_ptr, idx, structurals);

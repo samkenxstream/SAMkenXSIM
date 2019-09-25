@@ -10,7 +10,7 @@ namespace simdjson {
 
 template <>
 struct simd_input<Architecture::WESTMERE> {
-  const __m128i chunks[4];
+  __m128i chunks[4];
 
   really_inline simd_input()
       : chunks { __m128i(), __m128i(), __m128i(), __m128i() } {}

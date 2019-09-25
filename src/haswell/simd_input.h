@@ -10,7 +10,7 @@ namespace simdjson {
 
 template <>
 struct simd_input<Architecture::HASWELL> {
-  const __m256i chunks[2];
+  __m256i chunks[2];
 
   really_inline simd_input() : chunks{__m256i(), __m256i()} {}
 
