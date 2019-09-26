@@ -8,15 +8,13 @@
 // This is just a naive implementation. It should be normally
 // disable, but can be used for research purposes to compare
 // again our optimized version.
-really_inline void flatten_bits(uint32_t *base_ptr, uint32_t &base, uint32_t idx, uint64_t bits) {
-  uint32_t *out_ptr = base_ptr + base;
-  idx -= 64;
+really_inline void flatten_bits(uint32_t *&base_ptr, uint32_t &idx, uint64_t bits) {
   while (bits != 0) {
-    out_ptr[0] = idx + trailing_zeroes(bits);
+    base_ptr[0] = idx + trailing_zeroes(bits);
     bits = bits & (bits - 1);
-    out_ptr++;
+    base_ptr++;
   }
-  base = (out_ptr - base_ptr);
+  idx += 64;
 }
 
 #else // SIMDJSON_NAIVE_FLATTEN
@@ -26,14 +24,15 @@ really_inline void flatten_bits(uint32_t *base_ptr, uint32_t &base, uint32_t idx
 // base_ptr[base] incrementing base as we go
 // will potentially store extra values beyond end of valid bits, so base_ptr
 // needs to be large enough to handle this
-really_inline void flatten_bits(uint32_t *&base_ptr, uint32_t idx, uint64_t bits) {
+really_inline void flatten_bits(uint32_t *&base_ptr, size_t &idx, uint64_t bits) {
   // In some instances, the next branch is expensive because it is mispredicted.
   // Unfortunately, in other cases,
   // it helps tremendously.
-  if (bits == 0)
+  if (bits == 0) {
+    idx += 64;
     return;
+  }
   uint32_t cnt = hamming(bits);
-  idx -= 64;
 
   // Do the first 8 all together
   for (int i=0; i<8; i++) {
@@ -63,5 +62,6 @@ really_inline void flatten_bits(uint32_t *&base_ptr, uint32_t idx, uint64_t bits
   }
 
   base_ptr += cnt;
+  idx += 64;
 }
 #endif // SIMDJSON_NAIVE_FLATTEN

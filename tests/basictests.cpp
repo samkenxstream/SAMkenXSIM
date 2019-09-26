@@ -29,7 +29,7 @@ bool navigate_test() {
 
   simdjson::ParsedJson pj = simdjson::build_parsed_json(json);
   if (!pj.is_valid()) {
-      printf("Something is wrong in navigate: %s.\n", json.c_str());
+      printf("Error in navigate: %s.\nJSON: %s\n", pj.get_error_message().c_str(), json.c_str());
       return false;
   }
   simdjson::ParsedJson::Iterator pjh(pj);

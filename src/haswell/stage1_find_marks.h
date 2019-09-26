@@ -90,14 +90,15 @@ really_inline void find_whitespace_and_operators(
 // base_ptr[base] incrementing base as we go
 // will potentially store extra values beyond end of valid bits, so base_ptr
 // needs to be large enough to handle this
-really_inline void flatten_bits(uint32_t *&base_ptr, uint32_t idx, uint64_t bits) {
+really_inline void flatten_bits(uint32_t *&base_ptr, size_t &idx, uint64_t bits) {
   // In some instances, the next branch is expensive because it is mispredicted.
   // Unfortunately, in other cases,
   // it helps tremendously.
-  if (bits == 0)
-      return;
+  if (bits == 0) {
+    idx += 64;
+    return;
+  }
   uint32_t cnt = _mm_popcnt_u64(bits);
-  idx -= 64;
 
   // Do the first 8 all together
   for (int i=0; i<8; i++) {
@@ -127,6 +128,7 @@ really_inline void flatten_bits(uint32_t *&base_ptr, uint32_t idx, uint64_t bits
   }
 
   base_ptr += cnt;
+  idx += 64;
 }
 
 #include "generic/stage1_find_marks.h"
