@@ -57,6 +57,7 @@ unified_machine(const uint8_t *buf, size_t len, ParsedJson &pj) {
   uint32_t idx; /* location of the structural character in the input (buf)   */
   uint8_t c;    /* used to track the (structural) character we are looking at,
                    updated */
+  int errors = 0; /* error accumulator so we don't have to branch on every error */
   /* by UPDATE_CHAR macro */
   uint32_t depth = 0; /* could have an arbitrary starting depth */
   pj.init();          /* sets is_valid to false          */
@@ -203,11 +204,12 @@ unified_machine(const uint8_t *buf, size_t len, ParsedJson &pj) {
   }
 start_continue:
   /* the string might not be NULL terminated. */
-  if (i + 1 == pj.n_structural_indexes) {
-    goto succeed;
-  } else {
+  errors |= i + 1 != pj.n_structural_indexes;
+  if (errors) {
     goto fail;
   }
+  goto succeed;
+
   /*//////////////////////////// OBJECT STATES ///////////////////////////*/
 
 object_begin:
