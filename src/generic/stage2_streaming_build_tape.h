@@ -8,8 +8,9 @@ unified_machine(const uint8_t *buf, size_t len, ParsedJson &pj, size_t &next_jso
     size_t idx; /* location of the structural character in the input (buf)   */
     uint8_t c;    /* used to track the (structural) character we are looking at,
                    updated */
+    uint64_t errors = 0; /* accumulated errors */
     /* by UPDATE_CHAR macro */
-    size_t depth = 0; /* could have an arbitrary starting depth */
+    uint32_t depth = 0; /* could have an arbitrary starting depth */
     pj.init();          /* sets is_valid to false          */
 //    if (pj.byte_capacity < len) {
 //        pj.error_code = simdjson::CAPACITY;
@@ -37,9 +38,7 @@ unified_machine(const uint8_t *buf, size_t len, ParsedJson &pj, size_t &next_jso
              * https://tools.ietf.org/html/rfc8259
              * #ifdef SIMDJSON_ALLOWANYTHINGINROOT */
         case '"': {
-            if (!parse_string(buf, len, pj, depth, idx)) {
-                goto fail;
-            }
+            parse_string(buf, len, pj, depth, idx, errors);
             break;
         }
         case 't': {
@@ -168,9 +167,7 @@ unified_machine(const uint8_t *buf, size_t len, ParsedJson &pj, size_t &next_jso
     UPDATE_CHAR();
     switch (c) {
         case '"': {
-            if (!parse_string(buf, len, pj, depth, idx)) {
-                goto fail;
-            }
+            parse_string(buf, len, pj, depth, idx, errors);
             goto object_key_state;
         }
         case '}':
@@ -187,9 +184,7 @@ unified_machine(const uint8_t *buf, size_t len, ParsedJson &pj, size_t &next_jso
     UPDATE_CHAR();
     switch (c) {
         case '"': {
-            if (!parse_string(buf, len, pj, depth, idx)) {
-                goto fail;
-            }
+            parse_string(buf, len, pj, depth, idx, errors);
             break;
         }
         case 't':
@@ -251,9 +246,7 @@ unified_machine(const uint8_t *buf, size_t len, ParsedJson &pj, size_t &next_jso
             if (c != '"') {
                 goto fail;
             } else {
-                if (!parse_string(buf, len, pj, depth, idx)) {
-                    goto fail;
-                }
+                parse_string(buf, len, pj, depth, idx, errors);
                 goto object_key_state;
             }
         case '}':
@@ -285,9 +278,7 @@ unified_machine(const uint8_t *buf, size_t len, ParsedJson &pj, size_t &next_jso
      * on paths that can accept a close square brace (post-, and at start) */
     switch (c) {
         case '"': {
-            if (!parse_string(buf, len, pj, depth, idx)) {
-                goto fail;
-            }
+            parse_string(buf, len, pj, depth, idx, errors);
             break;
         }
         case 't':
@@ -373,6 +364,10 @@ unified_machine(const uint8_t *buf, size_t len, ParsedJson &pj, size_t &next_jso
         return pj.error_code;
 
     succeed:
+    if (errors) {
+        return simdjson::TAPE_ERROR;
+    }
+
     depth--;
     if (depth != 0) {
         fprintf(stderr, "internal bug\n");

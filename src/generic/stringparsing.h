@@ -35,9 +35,9 @@ static const uint8_t escape_map[256] = {
 // dest will advance a variable amount (return via pointer)
 // return true if the unicode codepoint was valid
 // We work in little-endian then swap at write time
-WARN_UNUSED
-really_inline bool handle_unicode_codepoint(const uint8_t **src_ptr,
-                                            uint8_t **dst_ptr) {
+really_inline void handle_unicode_codepoint(const uint8_t **src_ptr,
+                                            uint8_t **dst_ptr,
+                                            uint64_t& errors) {
   // hex_to_u32_nocheck fills high 16 bits of the return value with 1s if the
   // conversion isn't valid; we defer the check for this to inside the
   // multilingual plane check
@@ -46,33 +46,30 @@ really_inline bool handle_unicode_codepoint(const uint8_t **src_ptr,
   // check for low surrogate for characters outside the Basic
   // Multilingual Plane.
   if (code_point >= 0xd800 && code_point < 0xdc00) {
-    if (((*src_ptr)[0] != '\\') || (*src_ptr)[1] != 'u') {
-      return false;
-    }
     uint32_t code_point_2 = hex_to_u32_nocheck(*src_ptr + 2);
+
+    code_point =
+        (((code_point - 0xd800) << 10) | (code_point_2 - 0xdc00)) + 0x10000;
+    *src_ptr += 6;
 
     // if the first code point is invalid we will get here, as we will go past
     // the check for being outside the Basic Multilingual plane. If we don't
     // find a \u immediately afterwards we fail out anyhow, but if we do,
     // this check catches both the case of the first code point being invalid
     // or the second code point being invalid.
-    if ((code_point | code_point_2) >> 16) {
-      return false;
-    }
-
-    code_point =
-        (((code_point - 0xd800) << 10) | (code_point_2 - 0xdc00)) + 0x10000;
-    *src_ptr += 6;
+    errors |= (*src_ptr)[0] != '\\' || (*src_ptr)[1] != 'u' || (code_point | code_point_2) >> 16;
   }
   size_t offset = codepoint_to_utf8(code_point, *dst_ptr);
   *dst_ptr += offset;
-  return offset > 0;
+  errors |= offset == 0;
 }
 
-WARN_UNUSED really_inline bool parse_string(UNUSED const uint8_t *buf,
-                                            UNUSED size_t len, ParsedJson &pj,
+really_inline void parse_string(const uint8_t *buf,
+                                            UNUSED size_t len,
+                                            ParsedJson &pj,
                                             UNUSED const uint32_t depth,
-                                            UNUSED uint32_t offset) {
+                                            uint32_t offset,
+                                            uint64_t& errors) {
   pj.write_tape(pj.current_string_buf_loc - pj.string_buf, '"');
   const uint8_t *src = &buf[offset + 1]; /* we know that buf at offset is a " */
   uint8_t *dst = pj.current_string_buf_loc + sizeof(uint32_t);
@@ -105,33 +102,29 @@ WARN_UNUSED really_inline bool parse_string(UNUSED const uint8_t *buf,
       /* we advance the point, accounting for the fact that we have a NULL
        * termination         */
       pj.current_string_buf_loc = dst + quote_dist + 1;
-      return true;
+      return;
     }
     if (((helper.quote_bits - 1) & helper.bs_bits) != 0) {
       /* find out where the backspace is */
       auto bs_dist = trailing_zeroes(helper.bs_bits);
       uint8_t escape_char = src[bs_dist + 1];
       /* we encountered backslash first. Handle backslash */
+      /* move src/dst up to the start; they will be further adjusted
+          within the unicode codepoint handling code. */
+      src += bs_dist;
+      dst += bs_dist;
       if (escape_char == 'u') {
-        /* move src/dst up to the start; they will be further adjusted
-           within the unicode codepoint handling code. */
-        src += bs_dist;
-        dst += bs_dist;
-        if (!handle_unicode_codepoint(&src, &dst)) {
-          return false;
-        }
+        handle_unicode_codepoint(&src, &dst, errors);
       } else {
         /* simple 1:1 conversion. Will eat bs_dist+2 characters in input and
          * write bs_dist+1 characters to output
          * note this may reach beyond the part of the buffer we've actually
          * seen. I think this is ok */
         uint8_t escape_result = escape_map[escape_char];
-        if (escape_result == 0u) {
-          return false; /* bogus escape value is an error */
-        }
-        dst[bs_dist] = escape_result;
-        src += bs_dist + 2;
-        dst += bs_dist + 1;
+        *dst = escape_result;
+        src += 2;
+        dst += 1;
+        errors |= escape_result == 0u;
       }
     } else {
       /* they are the same. Since they can't co-occur, it means we
@@ -140,6 +133,4 @@ WARN_UNUSED really_inline bool parse_string(UNUSED const uint8_t *buf,
       dst += parse_string_helper::BYTES_PROCESSED;
     }
   }
-  /* can't be reached */
-  return true;
 }

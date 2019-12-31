@@ -86,7 +86,7 @@ unified_machine(const uint8_t *buf, size_t len, ParsedJson &pj) {
      * https://tools.ietf.org/html/rfc8259
      * #ifdef SIMDJSON_ALLOWANYTHINGINROOT */
   case '"': {
-    errors |= !parse_string(buf, len, pj, depth, idx);
+    parse_string(buf, len, pj, depth, idx, errors);
     break;
   }
   case 't': {
@@ -200,7 +200,7 @@ object_begin:
   UPDATE_CHAR();
   switch (c) {
   case '"': {
-    errors |= !parse_string(buf, len, pj, depth, idx);
+    parse_string(buf, len, pj, depth, idx, errors);
     goto object_key_state;
   }
   case '}':
@@ -217,7 +217,7 @@ object_key_state:
   UPDATE_CHAR();
   switch (c) {
   case '"': {
-    errors |= !parse_string(buf, len, pj, depth, idx);
+    parse_string(buf, len, pj, depth, idx, errors);
     break;
   }
   case 't':
@@ -269,7 +269,7 @@ object_continue:
     if (c != '"') {
       goto fail;
     } else {
-      errors |= !parse_string(buf, len, pj, depth, idx);
+      parse_string(buf, len, pj, depth, idx, errors);
       goto object_key_state;
     }
   case '}':
@@ -301,7 +301,7 @@ main_array_switch:
    * on paths that can accept a close square brace (post-, and at start) */
   switch (c) {
   case '"': {
-    errors |= !parse_string(buf, len, pj, depth, idx);
+    parse_string(buf, len, pj, depth, idx, errors);
     break;
   }
   case 't':
@@ -362,6 +362,9 @@ array_continue:
 
 succeed:
   depth--;
+  if (errors) {
+    return simdjson::TAPE_ERROR;
+  }
   if (depth != 0) {
     fprintf(stderr, "internal bug\n");
     abort();
