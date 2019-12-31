@@ -86,9 +86,7 @@ unified_machine(const uint8_t *buf, size_t len, ParsedJson &pj) {
      * https://tools.ietf.org/html/rfc8259
      * #ifdef SIMDJSON_ALLOWANYTHINGINROOT */
   case '"': {
-    if (!parse_string(buf, len, pj, depth, idx)) {
-      goto fail;
-    }
+    errors |= !parse_string(buf, len, pj, depth, idx);
     break;
   }
   case 't': {
@@ -102,10 +100,7 @@ unified_machine(const uint8_t *buf, size_t len, ParsedJson &pj) {
     }
     memcpy(copy, buf, len);
     memset(copy + len, ' ', sizeof(uint64_t));
-    if (!is_valid_true_atom(reinterpret_cast<const uint8_t *>(copy) + idx)) {
-      free(copy);
-      goto fail;
-    }
+    errors |= !is_valid_true_atom(reinterpret_cast<const uint8_t *>(copy) + idx);
     free(copy);
     pj.write_tape(0, c);
     break;
@@ -122,10 +117,7 @@ unified_machine(const uint8_t *buf, size_t len, ParsedJson &pj) {
     }
     memcpy(copy, buf, len);
     memset(copy + len, ' ', sizeof(uint64_t));
-    if (!is_valid_false_atom(reinterpret_cast<const uint8_t *>(copy) + idx)) {
-      free(copy);
-      goto fail;
-    }
+    errors |= !is_valid_false_atom(reinterpret_cast<const uint8_t *>(copy) + idx);
     free(copy);
     pj.write_tape(0, c);
     break;
@@ -141,10 +133,7 @@ unified_machine(const uint8_t *buf, size_t len, ParsedJson &pj) {
     }
     memcpy(copy, buf, len);
     memset(copy + len, ' ', sizeof(uint64_t));
-    if (!is_valid_null_atom(reinterpret_cast<const uint8_t *>(copy) + idx)) {
-      free(copy);
-      goto fail;
-    }
+    errors |= !is_valid_null_atom(reinterpret_cast<const uint8_t *>(copy) + idx);
     free(copy);
     pj.write_tape(0, c);
     break;
@@ -173,11 +162,8 @@ unified_machine(const uint8_t *buf, size_t len, ParsedJson &pj) {
     }
     memcpy(copy, buf, len);
     memset(copy + len, ' ', SIMDJSON_PADDING);
-    if (!parse_number(reinterpret_cast<const uint8_t *>(copy), pj, idx,
-                      false)) {
-      free(copy);
-      goto fail;
-    }
+    errors |= !parse_number(reinterpret_cast<const uint8_t *>(copy), pj, idx,
+                      false);
     free(copy);
     break;
   }
@@ -192,10 +178,8 @@ unified_machine(const uint8_t *buf, size_t len, ParsedJson &pj) {
     }
     memcpy(copy, buf, len);
     memset(copy + len, ' ', SIMDJSON_PADDING);
-    if (!parse_number(reinterpret_cast<const uint8_t *>(copy), pj, idx, true)) {
-      free(copy);
-      goto fail;
-    }
+    errors |= !parse_number(reinterpret_cast<const uint8_t *>(copy), pj, idx,
+                      true);
     free(copy);
     break;
   }
@@ -216,9 +200,7 @@ object_begin:
   UPDATE_CHAR();
   switch (c) {
   case '"': {
-    if (!parse_string(buf, len, pj, depth, idx)) {
-      goto fail;
-    }
+    errors |= !parse_string(buf, len, pj, depth, idx);
     goto object_key_state;
   }
   case '}':
@@ -235,27 +217,19 @@ object_key_state:
   UPDATE_CHAR();
   switch (c) {
   case '"': {
-    if (!parse_string(buf, len, pj, depth, idx)) {
-      goto fail;
-    }
+    errors |= !parse_string(buf, len, pj, depth, idx);
     break;
   }
   case 't':
-    if (!is_valid_true_atom(buf + idx)) {
-      goto fail;
-    }
+    errors |= !is_valid_true_atom(buf + idx);
     pj.write_tape(0, c);
     break;
   case 'f':
-    if (!is_valid_false_atom(buf + idx)) {
-      goto fail;
-    }
+    errors |= !is_valid_false_atom(buf + idx);
     pj.write_tape(0, c);
     break;
   case 'n':
-    if (!is_valid_null_atom(buf + idx)) {
-      goto fail;
-    }
+    errors |= !is_valid_null_atom(buf + idx);
     pj.write_tape(0, c);
     break;
   case '0':
@@ -268,15 +242,11 @@ object_key_state:
   case '7':
   case '8':
   case '9': {
-    if (!parse_number(buf, pj, idx, false)) {
-      goto fail;
-    }
+    errors |= !parse_number(buf, pj, idx, false);
     break;
   }
   case '-': {
-    if (!parse_number(buf, pj, idx, true)) {
-      goto fail;
-    }
+    errors |= !parse_number(buf, pj, idx, true);
     break;
   }
   case '{': {
@@ -299,9 +269,7 @@ object_continue:
     if (c != '"') {
       goto fail;
     } else {
-      if (!parse_string(buf, len, pj, depth, idx)) {
-        goto fail;
-      }
+      errors |= !parse_string(buf, len, pj, depth, idx);
       goto object_key_state;
     }
   case '}':
@@ -333,27 +301,19 @@ main_array_switch:
    * on paths that can accept a close square brace (post-, and at start) */
   switch (c) {
   case '"': {
-    if (!parse_string(buf, len, pj, depth, idx)) {
-      goto fail;
-    }
+    errors |= !parse_string(buf, len, pj, depth, idx);
     break;
   }
   case 't':
-    if (!is_valid_true_atom(buf + idx)) {
-      goto fail;
-    }
+    errors |= !is_valid_true_atom(buf + idx);
     pj.write_tape(0, c);
     break;
   case 'f':
-    if (!is_valid_false_atom(buf + idx)) {
-      goto fail;
-    }
+    errors |= !is_valid_false_atom(buf + idx);
     pj.write_tape(0, c);
     break;
   case 'n':
-    if (!is_valid_null_atom(buf + idx)) {
-      goto fail;
-    }
+    errors |= !is_valid_null_atom(buf + idx);
     pj.write_tape(0, c);
     break; /* goto array_continue; */
 
@@ -367,15 +327,11 @@ main_array_switch:
   case '7':
   case '8':
   case '9': {
-    if (!parse_number(buf, pj, idx, false)) {
-      goto fail;
-    }
+    errors |= !parse_number(buf, pj, idx, false);
     break; /* goto array_continue; */
   }
   case '-': {
-    if (!parse_number(buf, pj, idx, true)) {
-      goto fail;
-    }
+    errors |= !parse_number(buf, pj, idx, true);
     break; /* goto array_continue; */
   }
   case '{': {
