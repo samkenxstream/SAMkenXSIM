@@ -193,27 +193,21 @@ start_continue:
     goto fail;
   }
   goto succeed;
-
   /*//////////////////////////// OBJECT STATES ///////////////////////////*/
 
 object_begin:
   UPDATE_CHAR();
-  switch (c) {
-  case '"': {
+  if (c == '"') {
     parse_string(buf, len, pj, depth, idx, errors);
     goto object_key_state;
-  }
-  case '}':
+  } else {
+    errors |= c != '}';
     goto scope_end; /* could also go to object_continue */
-  default:
-    goto fail;
   }
 
 object_key_state:
   UPDATE_CHAR();
-  if (c != ':') {
-    goto fail;
-  }
+  errors |= c != ':';
   UPDATE_CHAR();
   switch (c) {
   case '"': {
@@ -263,20 +257,16 @@ object_key_state:
 
 object_continue:
   UPDATE_CHAR();
-  switch (c) {
-  case ',':
+  if (c == ',') {
     UPDATE_CHAR();
     if (c != '"') {
       goto fail;
-    } else {
-      parse_string(buf, len, pj, depth, idx, errors);
-      goto object_key_state;
     }
-  case '}':
-    goto scope_end;
-  default:
-    goto fail;
+    parse_string(buf, len, pj, depth, idx, errors);
+    goto object_key_state;
   }
+  errors |= c != '}';
+  // goto scope_end;
 
   /*//////////////////////////// COMMON STATE ///////////////////////////*/
 
@@ -348,15 +338,12 @@ main_array_switch:
 
 array_continue:
   UPDATE_CHAR();
-  switch (c) {
-  case ',':
-    UPDATE_CHAR();
-    goto main_array_switch;
-  case ']':
+  if (c == ']') {
     goto scope_end;
-  default:
-    goto fail;
   }
+  errors |= c != ',';
+  UPDATE_CHAR();
+  goto main_array_switch;
 
   /*//////////////////////////// FINAL STATES ///////////////////////////*/
 

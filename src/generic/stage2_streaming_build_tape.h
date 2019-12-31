@@ -8,7 +8,7 @@ unified_machine(const uint8_t *buf, size_t len, ParsedJson &pj, size_t &next_jso
     size_t idx; /* location of the structural character in the input (buf)   */
     uint8_t c;    /* used to track the (structural) character we are looking at,
                    updated */
-    uint64_t errors = 0; /* accumulated errors */
+    int errors = 0; /* accumulated errors */
     /* by UPDATE_CHAR macro */
     uint32_t depth = 0; /* could have an arbitrary starting depth */
     pj.init();          /* sets is_valid to false          */

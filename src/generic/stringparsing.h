@@ -37,7 +37,7 @@ static const uint8_t escape_map[256] = {
 // We work in little-endian then swap at write time
 really_inline void handle_unicode_codepoint(const uint8_t **src_ptr,
                                             uint8_t **dst_ptr,
-                                            uint64_t& errors) {
+                                            int& errors) {
   // hex_to_u32_nocheck fills high 16 bits of the return value with 1s if the
   // conversion isn't valid; we defer the check for this to inside the
   // multilingual plane check
@@ -69,7 +69,7 @@ really_inline void parse_string(const uint8_t *buf,
                                             ParsedJson &pj,
                                             UNUSED const uint32_t depth,
                                             uint32_t offset,
-                                            uint64_t& errors) {
+                                            int& errors) {
   pj.write_tape(pj.current_string_buf_loc - pj.string_buf, '"');
   const uint8_t *src = &buf[offset + 1]; /* we know that buf at offset is a " */
   uint8_t *dst = pj.current_string_buf_loc + sizeof(uint32_t);
