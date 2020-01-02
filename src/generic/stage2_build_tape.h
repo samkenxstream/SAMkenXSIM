@@ -269,128 +269,122 @@ struct structural_parser {
     }
     return SUCCESS;
   }
-};
 
 // Redefine FAIL_IF to use goto since it'll be used inside the function now
 #undef FAIL_IF
 #define FAIL_IF(EXPR) { if (EXPR) { goto error; } }
 
-/************
- * The JSON is parsed to a tape, see the accompanying tape.md file
- * for documentation.
- ***********/
-WARN_UNUSED  int
-unified_machine(const uint8_t *buf, size_t len, ParsedJson &pj) {
-  static constexpr unified_machine_addresses addresses = INIT_ADDRESSES();
-  structural_parser parser(buf, len, pj);
-  int result = parser.start(addresses.finish);
-  if (result) { return result; }
+  WARN_UNUSED int parse() {
+    static constexpr unified_machine_addresses addresses = INIT_ADDRESSES();
+    int result = start(addresses.finish);
+    if (result) { return result; }
+
+    //
+    // Read first value
+    //
+    switch (c) {
+    case '{':
+      FAIL_IF( push_start_scope(addresses.finish) );
+      goto object_begin;
+    case '[':
+      FAIL_IF( push_start_scope(addresses.finish) );
+      goto array_begin;
+    case '"':
+      FAIL_IF( parse_string() );
+      goto finish;
+    case 't': case 'f': case 'n':
+      FAIL_IF(
+        with_space_terminated_copy([&](auto copy, auto offset) {
+          return parse_atom(copy, offset);
+        })
+      );
+      goto finish;
+    case '0': case '1': case '2': case '3': case '4':
+    case '5': case '6': case '7': case '8': case '9':
+      FAIL_IF(
+        with_space_terminated_copy([&](auto copy, auto offset) {
+          return parse_number(copy, offset, false);
+        })
+      );
+      goto finish;
+    case '-':
+      FAIL_IF(
+        with_space_terminated_copy([&](auto copy, auto offset) {
+          return parse_number(copy, offset, true);
+        })
+      );
+      goto finish;
+    default:
+      goto error;
+    }
 
   //
-  // Read first value
+  // Object states
   //
-  switch (parser.c) {
-  case '{':
-    FAIL_IF( parser.push_start_scope(addresses.finish) );
-    goto object_begin;
-  case '[':
-    FAIL_IF( parser.push_start_scope(addresses.finish) );
-    goto array_begin;
-  case '"':
-    FAIL_IF( parser.parse_string() );
-    goto finish;
-  case 't': case 'f': case 'n':
-    FAIL_IF(
-      parser.with_space_terminated_copy([&](auto copy, auto idx) {
-        return parser.parse_atom(copy, idx);
-      })
-    );
-    goto finish;
-  case '0': case '1': case '2': case '3': case '4':
-  case '5': case '6': case '7': case '8': case '9':
-    FAIL_IF(
-      parser.with_space_terminated_copy([&](auto copy, auto idx) {
-        return parser.parse_number(copy, idx, false);
-      })
-    );
-    goto finish;
-  case '-':
-    FAIL_IF(
-      parser.with_space_terminated_copy([&](auto copy, auto idx) {
-        return parser.parse_number(copy, idx, true);
-      })
-    );
-    goto finish;
-  default:
-    goto error;
+  object_begin:
+    advance_char();
+    switch (c) {
+    case '"': {
+      FAIL_IF( parse_string() );
+      goto object_key_state;
+    }
+    case '}':
+      goto scope_end; // could also go to object_continue
+    default:
+      goto error;
+    }
+
+  object_key_state:
+    FAIL_IF( advance_char() != ':' );
+
+    advance_char();
+    GOTO( parse_value(addresses, addresses.object_continue) );
+
+  object_continue:
+    switch (advance_char()) {
+    case ',':
+      FAIL_IF( advance_char() != '"' );
+      FAIL_IF( parse_string() );
+      goto object_key_state;
+    case '}':
+      goto scope_end;
+    default:
+      goto error;
+    }
+
+  scope_end:
+    CONTINUE( pop_scope() );
+
+  //
+  // Array states
+  //
+  array_begin:
+    if (advance_char() == ']') {
+      goto scope_end; // could also go to array_continue
+    }
+
+  main_array_switch:
+    /* we call update char on all paths in, so we can peek at c on the
+    * on paths that can accept a close square brace (post-, and at start) */
+    GOTO( parse_value(addresses, addresses.array_continue) );
+
+  array_continue:
+    switch (advance_char()) {
+    case ',':
+      advance_char();
+      goto main_array_switch;
+    case ']':
+      goto scope_end;
+    default:
+      goto error;
+    }
+
+  finish:
+    return finish();
+
+  error:
+    return error();
   }
-
-//
-// Object parser states
-//
-object_begin:
-  parser.advance_char();
-  switch (parser.c) {
-  case '"': {
-    FAIL_IF( parser.parse_string() );
-    goto object_key_state;
-  }
-  case '}':
-    goto scope_end; // could also go to object_continue
-  default:
-    goto error;
-  }
-
-object_key_state:
-  FAIL_IF( parser.advance_char() != ':' );
-
-  parser.advance_char();
-  GOTO( parser.parse_value(addresses, addresses.object_continue) );
-
-object_continue:
-  switch (parser.advance_char()) {
-  case ',':
-    FAIL_IF( parser.advance_char() != '"' );
-    FAIL_IF( parser.parse_string() );
-    goto object_key_state;
-  case '}':
-    goto scope_end;
-  default:
-    goto error;
-  }
-
-scope_end:
-  CONTINUE( parser.pop_scope() );
-
-//
-// Array parser states
-//
-array_begin:
-  if (parser.advance_char() == ']') {
-    goto scope_end; // could also go to array_continue
-  }
-
-main_array_switch:
-  /* we call update char on all paths in, so we can peek at parser.c on the
-   * on paths that can accept a close square brace (post-, and at start) */
-  GOTO( parser.parse_value(addresses, addresses.array_continue) );
-
-array_continue:
-  switch (parser.advance_char()) {
-  case ',':
-    parser.advance_char();
-    goto main_array_switch;
-  case ']':
-    goto scope_end;
-  default:
-    goto error;
-  }
-
-finish:
-  return parser.finish();
-
-error:
-  return parser.error();
-}
+};
 
 } // namespace stage2

@@ -24,13 +24,15 @@ namespace simdjson {
 template <>
 WARN_UNUSED int
 unified_machine<Architecture::HASWELL>(const uint8_t *buf, size_t len, ParsedJson &pj) {
-  return haswell::stage2::unified_machine(buf, len, pj);
+  haswell::stage2::structural_parser parser(buf, len, pj);
+  return parser.parse();
 }
 
 template <>
 WARN_UNUSED int
 unified_machine<Architecture::HASWELL>(const uint8_t *buf, size_t len, ParsedJson &pj, size_t &next_json) {
-  return haswell::stage2::unified_machine(buf, len, pj, next_json);
+  haswell::stage2::streaming_structural_parser parser(buf, len, pj, next_json);
+  return parser.parse(next_json);
 }
 
 } // namespace simdjson
