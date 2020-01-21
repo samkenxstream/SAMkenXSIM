@@ -348,8 +348,7 @@ object_key_state:
 
 object_continue:
   switch (parser.advance_char()) {
-  case ',':
-    FAIL_IF( parser.advance_char() != '"' );
+  case '"':
     FAIL_IF( parser.parse_string() );
     goto object_key_state;
   case '}':
@@ -375,15 +374,10 @@ main_array_switch:
   GOTO( parser.parse_value(addresses, addresses.array_continue) );
 
 array_continue:
-  switch (parser.advance_char()) {
-  case ',':
-    parser.advance_char();
-    goto main_array_switch;
-  case ']':
+  if (parser.advance_char() == ']') {
     goto scope_end;
-  default:
-    goto error;
   }
+  goto main_array_switch;
 
 finish:
   return parser.finish();

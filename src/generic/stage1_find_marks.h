@@ -401,7 +401,7 @@ really_inline uint64_t json_structural_scanner::find_potential_structurals(const
   // backslash detection before we can determine a string. We may be able to safely shove those
   // processes into a branch.
   //
-  return (start_value & ~space) | open | close | separator;
+  return (start_value & ~space) | open | close | colon;
 }
 
 //
