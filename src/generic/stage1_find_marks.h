@@ -158,7 +158,7 @@ UNUSED static char * format_masked_text(uint64_t mask, simd8x64<uint8_t> in) {
       if (buf[i] <= ' ') { buf[i] = '_'; }
     } else {
       buf[i] = ' ';
-    }    
+    }
   }
   buf[64] = '\0';
   return buf;
@@ -234,7 +234,8 @@ really_inline uint64_t follows_odd_sequence_of(const uint64_t match, uint64_t &o
 //
 really_inline uint64_t find_series(const uint64_t match, const uint64_t separator, uint64_t &overflow) {
   uint64_t result;
-  overflow = sub_overflow(separator, match + overflow, &result);
+  overflow = sub_overflow(separator, overflow, &result);
+  overflow |= sub_overflow(result, match, &result);
   return result;
 }
 
@@ -268,8 +269,8 @@ really_inline ErrorValues json_structural_scanner::detect_errors_on_eof(bool str
   if ((prev_in_string) and (not streaming)) {
     return UNCLOSED_STRING;
   }
-  if (prev_separator) {
-    return TAPE_ERROR; // comma at the end is invalid
+  if (!prev_in_value) {
+    return TAPE_ERROR; // open or comma at the end is invalid; there must be at least one value, too.
   }
   if (has_error) {
     return UNESCAPED_CHARS; // TODO also out of order JSON
@@ -289,7 +290,7 @@ really_inline ErrorValues json_structural_scanner::detect_errors_on_eof(bool str
 //
 really_inline uint64_t json_structural_scanner::find_strings(const simd::simd8x64<uint8_t> in, uint64_t quote) {
   const uint64_t backslash = in.eq('\\');
-  const uint64_t escaped = follows_odd_sequence_of(backslash, prev_escaped) << 1;
+  const uint64_t escaped = follows_odd_sequence_of(backslash, prev_escaped);
   const uint64_t real_quote = quote & ~escaped;
   // prefix_xor flips on bits inside the string (and flips off the end quote).
   const uint64_t in_string = prefix_xor(real_quote) ^ prev_in_string;
@@ -371,6 +372,7 @@ really_inline uint64_t json_structural_scanner::find_potential_structurals(const
 
   // Separator/Open = 1: `1 {`, `} {`, `, ,`, `{ ,`
   must_be_string = (separator|open) & start_value;
+
   // Quote = 0: `1"` `1"1` `"""`
   must_be_string |= quote & ~start_value;
 

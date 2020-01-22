@@ -138,12 +138,12 @@ $(FEATURE_JSON_FILES): benchmark/genfeaturejson.rb
 run_benchfeatures: benchfeatures $(FEATURE_JSON_FILES)
 	./benchfeatures -n 1000
 
-test: run_basictests run_jsoncheck run_numberparsingcheck run_integer_tests run_stringparsingcheck  run_jsonstream_test run_pointercheck run_testjson2json_sh run_issue150_sh run_jsoncheck_noavx
+test: run_basictests run_jsoncheck run_numberparsingcheck run_integer_tests run_stringparsingcheck run_pointercheck run_testjson2json_sh run_issue150_sh run_jsoncheck_noavx # run_jsonstream_test
 	@echo "It looks like the code is good!"
 
-quiettest: run_basictests run_jsoncheck run_numberparsingcheck run_integer_tests run_stringparsingcheck run_jsoncheck run_jsonstream_test run_pointercheck run_testjson2json_sh run_issue150_sh run_jsoncheck_noavx
+quiettest: run_basictests run_jsoncheck run_numberparsingcheck run_integer_tests run_stringparsingcheck run_jsoncheck run_pointercheck run_testjson2json_sh run_issue150_sh run_jsoncheck_noavx # run_jsonstream_test
 
-quicktests: run_basictests run_jsoncheck run_numberparsingcheck run_integer_tests run_stringparsingcheck run_jsoncheck run_jsonstream_test run_pointercheck run_jsoncheck_noavx
+quicktests: run_basictests run_jsoncheck run_numberparsingcheck run_integer_tests run_stringparsingcheck run_jsoncheck run_pointercheck run_jsoncheck_noavx # run_jsonstream_test
 
 slowtests: run_testjson2json_sh run_issue150_sh
 
