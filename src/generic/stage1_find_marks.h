@@ -233,8 +233,10 @@ really_inline ErrorValues json_structural_scanner::detect_errors_on_eof(bool str
 //
 really_inline uint64_t json_structural_scanner::find_strings(const simd::simd8x64<uint8_t> in) {
   const uint64_t backslash = in.eq('\\');
-  const uint64_t escaped = find_escaped(backslash, prev_escaped);
-  const uint64_t quote = in.eq('"') & ~escaped;
+  uint64_t quote = in.eq('"');
+  if (backslash || prev_escaped) {
+    quote &= ~find_escaped(backslash, prev_escaped);
+  }
   // prefix_xor flips on bits inside the string (and flips off the end quote).
   const uint64_t in_string = prefix_xor(quote) ^ prev_in_string;
   /* right shift of a signed value expected to be well-defined and standard
