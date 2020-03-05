@@ -9,6 +9,7 @@
 #include "simdjson/padded_string.h"
 #include "simdjson/implementation.h"
 #include "simdjson/document.h"
+#include "simdjson/document_parser.h"
 #include "simdjson/document_stream.h"
 #include "simdjson/jsonminifier.h"
 
@@ -22,6 +23,7 @@
 // Inline functions
 #include "simdjson/inline/document.h"
 #include "simdjson/inline/document_iterator.h"
+#include "simdjson/inline/document_parser.h"
 #include "simdjson/inline/document_stream.h"
 #include "simdjson/inline/jsonstream.h"
 
