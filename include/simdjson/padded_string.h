@@ -105,6 +105,10 @@ private:
 
 }; // padded_string
 
+inline padded_string operator "" _pad(const char *str, size_t len) {
+  return padded_string(str, len);
+}
+
 } // namespace simdjson
 
 namespace simdjson::internal {
