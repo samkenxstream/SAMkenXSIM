@@ -62,4 +62,12 @@ static void document_parse_exception(State& state) {
 }
 BENCHMARK(document_parse_exception);
 
+static void print_json(State& state) {
+  for (auto _ : state) {
+    try {
+      UNUSED document doc = document::load()
+    }
+  }
+}
+
 BENCHMARK_MAIN();
