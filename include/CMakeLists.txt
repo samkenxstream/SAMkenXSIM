@@ -4,12 +4,14 @@ set(SIMDJSON_INCLUDE
     ${SIMDJSON_INCLUDE_DIR}/simdjson/common_defs.h
     ${SIMDJSON_INCLUDE_DIR}/simdjson/compiler_check.h
     ${SIMDJSON_INCLUDE_DIR}/simdjson/document.h
+    ${SIMDJSON_INCLUDE_DIR}/simdjson/document_formatters.h
     ${SIMDJSON_INCLUDE_DIR}/simdjson/document_iterator.h
     ${SIMDJSON_INCLUDE_DIR}/simdjson/document_parser.h
     ${SIMDJSON_INCLUDE_DIR}/simdjson/document_stream.h
     ${SIMDJSON_INCLUDE_DIR}/simdjson/error.h
     ${SIMDJSON_INCLUDE_DIR}/simdjson/implementation.h
     ${SIMDJSON_INCLUDE_DIR}/simdjson/inline/document.h
+    ${SIMDJSON_INCLUDE_DIR}/simdjson/inline/document_formatters.h
     ${SIMDJSON_INCLUDE_DIR}/simdjson/inline/document_iterator.h
     ${SIMDJSON_INCLUDE_DIR}/simdjson/inline/document_parser.h
     ${SIMDJSON_INCLUDE_DIR}/simdjson/inline/document_stream.h
