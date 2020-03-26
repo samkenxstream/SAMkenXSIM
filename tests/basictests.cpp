@@ -42,34 +42,21 @@ namespace number_tests {
   bool small_integers() {
     std::cout << __func__ << std::endl;
     char buf[1024];
-    simdjson::ParsedJson pj;
+    simdjson::document::parser parser;
     for (int m = 10; m < 20; m++) {
       for (int i = -1024; i < 1024; i++) {
         auto n = sprintf(buf, "%*d", m, i);
         buf[n] = '\0';
         fflush(NULL);
-        auto error = simdjson::json_parse(buf, n, pj);
-        if (error) {
-          printf("Could not parse '%s': %s\n", buf, simdjson::error_message(error).c_str());
-          return false;
-        }
-        simdjson::ParsedJson::Iterator iter(pj);
-        if(!iter.is_number()) {
-          printf("Root should be number\n");
-          return false;
-        }
-        if(!iter.is_integer()) {
-          printf("Root should be an integer\n");
-          return false;
-        }
-        int64_t x = iter.get_integer();
-        if(x != i) {
-          printf("failed to parse %s. \n", buf);
+
+        auto [x, error] = parser.parse(buf, n).as_int64_t();
+        if (error) { std::cerr << error << std::endl; return false; }
+        if (x != i) {
+          std::cerr << "Expected json '" << buf << "' to parse as " << i << ", parsed as " << x << " instead.";
           return false;
         }
       } 
     }
-    printf("Small integers can be parsed.\n");
     return true;
   }
 
@@ -77,64 +64,23 @@ namespace number_tests {
   bool powers_of_two() {
     std::cout << __func__ << std::endl;
     char buf[1024];
-    simdjson::ParsedJson pj;
+    simdjson::document::parser parser;
     int maxulp = 0;
     for (int i = -1075; i < 1024; ++i) {// large negative values should be zero.
       double expected = pow(2, i);
       auto n = sprintf(buf, "%.*e", std::numeric_limits<double>::max_digits10 - 1, expected);
       buf[n] = '\0';
       fflush(NULL);
-      auto error = simdjson::json_parse(buf, n, pj);
-      if (error) {
-        printf("Could not parse '%s': %s\n", buf, simdjson::error_message(error).c_str());
+
+      auto [x, error] = parser.parse(buf, n).as_double();
+      if (error) { std::cerr << error << std::endl; return false; }
+      int ulp = f64_ulp_dist(x,expected);  
+      if(ulp > maxulp) maxulp = ulp;
+      if(ulp > 0) {
+        std::cerr << "Expected json '" << buf << "' to parse as " << expected << ", parsed as " << x << " instead.";
         return false;
-      }
-      simdjson::ParsedJson::Iterator iter(pj);
-      if(!iter.is_number()) {
-        printf("Root should be number\n");
-        return false;
-      }
-      if(iter.is_integer()) {
-        int64_t x = iter.get_integer();
-        int power = 0;
-        while(x > 1) {
-          if((x % 2) != 0) {
-              printf("failed to parse %s. \n", buf);
-              return false;
-          }
-          x = x / 2;
-          power ++;
-        }
-        if(power != i)  {
-          printf("failed to parse %s. \n", buf);
-          return false;
-        }
-      } else if(iter.is_unsigned_integer()) {
-        uint64_t x = iter.get_unsigned_integer();
-        int power = 0;
-        while(x > 1) {
-          if((x % 2) != 0) {
-            printf("failed to parse %s. \n", buf);
-            return false;
-          }
-          x = x / 2;
-          power ++;
-        }
-        if(power != i) {
-          printf("failed to parse %s. \n", buf);
-          return false;
-        }
-      } else {
-        double x = iter.get_double();
-        int ulp = f64_ulp_dist(x,expected);  
-        if(ulp > maxulp) maxulp = ulp;
-        if(ulp > 0) {
-          printf("failed to parse %s. ULP = %d i = %d \n", buf, ulp, i);
-          return false;
-        }
       }
     }
-    printf("Powers of 2 can be parsed, maxulp = %d.\n", maxulp);
     return true;
   }
 
@@ -214,64 +160,23 @@ namespace number_tests {
   bool powers_of_ten() {
     std::cout << __func__ << std::endl;
     char buf[1024];
-    simdjson::ParsedJson pj;
+    simdjson::document::parser parser;
     for (int i = -1000000; i <= 308; ++i) {// large negative values should be zero.
       auto n = sprintf(buf,"1e%d", i);
       buf[n] = '\0';
       fflush(NULL);
-      auto error = simdjson::json_parse(buf, n, pj);
-      if (error) {
-        printf("Could not parse '%s': %s\n", buf, simdjson::error_message(error).c_str());
+
+      auto [x, error] = parser.parse(buf, n).as_double();
+      if (error) { std::cerr << error << std::endl; return false; }
+      double expected = ((i >= -307) ? testing_power_of_ten[i + 307]: std::pow(10, i));
+      int ulp = (int) f64_ulp_dist(x, expected);
+      if(ulp > 0) {
+        printf("failed to parse %s. \n", buf);
+        printf("actual: %.20g expected: %.20g \n", x, expected);
+        printf("ULP: %d \n", ulp);
         return false;
-      }
-      simdjson::ParsedJson::Iterator iter(pj);
-      if(!iter.is_number()) {
-        printf("Root should be number\n");
-        return false;
-      }
-      if(iter.is_integer()) {
-        int64_t x = iter.get_integer();
-        int power = 0;
-        while(x > 1) {
-          if((x % 10) != 0) {
-              printf("failed to parse %s. \n", buf);
-              return false;
-          }
-          x = x / 10;
-          power ++;
-        }
-        if(power != i)  {
-          printf("failed to parse %s. \n", buf);
-          return false;
-        }
-      } else if(iter.is_unsigned_integer()) {
-        uint64_t x = iter.get_unsigned_integer();
-        int power = 0;
-        while(x > 1) {
-          if((x % 10) != 0) {
-            printf("failed to parse %s. \n", buf);
-            return false;
-          }
-          x = x / 10;
-          power ++;
-        }
-        if(power != i) {
-          printf("failed to parse %s. \n", buf);
-          return false;
-        }
-      } else {
-        double x = iter.get_double();
-        double expected = ((i >= -307) ? testing_power_of_ten[i + 307]: std::pow(10, i));
-        int ulp = (int) f64_ulp_dist(x, expected);
-        if(ulp > 0) {
-          printf("failed to parse %s. \n", buf);
-          printf("actual: %.20g expected: %.20g \n", x, expected);
-          printf("ULP: %d \n", ulp);
-          return false;
-        }
       }
     }
-    printf("Powers of 10 can be parsed.\n");
     return true;
   }
   bool run() {
@@ -286,11 +191,9 @@ namespace document_tests {
   bool bad_example() {
     std::cout << __func__ << std::endl;
     std::string badjson = "[7,7,7,7,6,7,7,7,6,7,7,6,[7,7,7,7,6,7,7,7,6,7,7,6,7,7,7,7,7,7,6";
-    simdjson::document::parser parser = simdjson::build_parsed_json(badjson);
-    if(parser.is_valid()) {
-      printf("This json should not be valid %s.\n", badjson.c_str());
-      return false;
-    }
+    simdjson::document::parser parser;
+    auto [doc, error] = parser.parse(badjson);
+    if (!error) { std::cerr << "Expected an error, but parsing succeeded!" << std::endl; return false; }
     return true;
   }
   // returns true if successful
@@ -310,12 +213,9 @@ namespace document_tests {
               "\"IDs\":[116,943.3,234,38793]"
             "}"
         "}";
-    simdjson::document::parser parser = simdjson::build_parsed_json(json);
+    simdjson::document::parser parser;
     std::ostringstream myStream;
-    if( ! parser.print_json(myStream) ) {
-      std::cout << "cannot print it out? " << std::endl;
-      return false;
-    }
+    myStream << parser.parse(json);
     std::string newjson = myStream.str();
     if(json != newjson) {
       std::cout << "serialized json differs!" << std::endl;
@@ -363,16 +263,10 @@ namespace document_tests {
         fflush(NULL);
       }
       counter++;
-      auto ok1 = simdjson::json_parse(rec.c_str(), rec.length(), parser);
-      if (ok1 != 0 || !parser.is_valid()) {
-        printf("Something is wrong in skyprophet_test: %s.\n", rec.c_str());
-        return false;
-      }
-      auto ok2 = simdjson::json_parse(rec, parser);
-      if (ok2 != 0 || !parser.is_valid()) {
-        printf("Something is wrong in skyprophet_test: %s.\n", rec.c_str());
-        return false;
-      }
+      auto result1 = parser.parse(rec.c_str(), rec.length());
+      if (result1.error()) { std::cerr << result1.error() << std::endl; return false; }
+      auto result2 = parser.parse(rec);
+      if (result2.error()) { std::cerr << result2.error() << std::endl; return false; }
     }
     printf("\n");
     return true;
@@ -665,8 +559,10 @@ namespace dom_api_tests {
   using namespace std;
   using namespace simdjson;
 
+  SIMDJSON_PUSH_DISABLE_WARNINGS
+  SIMDJSON_DISABLE_DEPRECATED_WARNING
   // returns true if successful
-  bool document_iterator_test() {
+  bool ParsedJsonIterator_test() {
     std::cout << "Running " << __func__ << std::endl;
     std::string json = "{"
           "\"Image\": {"
@@ -775,6 +671,7 @@ namespace dom_api_tests {
     }
     return true;
   }
+  SIMDJSON_POP_DISABLE_WARNINGS
 
   bool object_iterator() {
     std::cout << "Running " << __func__ << std::endl;
@@ -1180,7 +1077,7 @@ namespace dom_api_tests {
 #endif
 
   bool run() {
-    return document_iterator_test() &&
+    return ParsedJsonIterator_test() &&
            object_iterator() &&
            array_iterator() &&
            object_iterator_empty() &&
