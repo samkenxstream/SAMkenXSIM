@@ -31,6 +31,7 @@ set(SOURCES
   fuzz_dump.cpp
   fuzz_print_json.cpp
   fuzz_dump_raw_tape.cpp
+  fuzz_ndjson.cpp
 )
 
 add_custom_target(print_all_fuzz_targets
