@@ -943,7 +943,7 @@ public:
   really_inline void set_max_capacity(size_t max_capacity) noexcept;
 
   /** @private Use the new DOM API instead */
-  class Iterator;
+  class [[deprecated("Use the new DOM navigation API instead (see doc/usage.md)")]] Iterator;
   /** @private Use simdjson_error instead */
   using InvalidJSON [[deprecated("Use simdjson_error instead")]] = simdjson_error;
 
@@ -1080,7 +1080,12 @@ private:
   /** Read the file into loaded_bytes */
   inline simdjson_result<size_t> read_file(const std::string &path) noexcept;
 
+  // This is a deprecated class, this line will be removed when parser::Iterator is
+SIMDJSON_PUSH_DISABLE_WARNINGS
+SIMDJSON_DISABLE_DEPRECATED_WARNING
   friend class parser::Iterator;
+SIMDJSON_POP_DISABLE_WARNINGS
+
   friend class document_stream;
 }; // class parser
 
