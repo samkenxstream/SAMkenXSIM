@@ -25,25 +25,37 @@ struct json_character_block {
   uint64_t _op;
 };
 
-really_inline json_character_block json_character_block::classify(const simd::simd8x64<uint8_t> in) {
-  // These lookups rely on the fact that anything < 127 will match the lower 4 bits, which is why
-  // we can't use the generic lookup_16.
-  auto whitespace_table = simd8<uint8_t>::repeat_16(' ', 100, 100, 100, 17, 100, 113, 2, 100, '\t', '\n', 112, 100, '\r', 100, 100);
-  auto op_table = simd8<uint8_t>::repeat_16(',', '}', 0, 0, 0xc0u, 0, 0, 0, 0, 0, 0, 0, 0, 0, ':', '{');
+// These lookups rely on the fact that anything < 127 will match the lower 4 bits, which is why
+// we can't use the generic lookup_16.
+const static auto whitespace_table = simd8<uint8_t>::repeat_16(' ', 100, 100, 100, 17, 100, 113, 2, 100, '\t', '\n', 112, 100, '\r', 100, 100);
+const static auto op_table = simd8<uint8_t>::repeat_16(',', '}', 0, 0, 0xc0u, 0, 0, 0, 0, 0, 0, 0, 0, 0, ':', '{');
 
+struct Opop {
+   really_inline auto operator ()(simd8<uint8_t> _in)const {
+        return ((_in | 32) == simd8<uint8_t>(_mm256_shuffle_epi8(op_table, _in-',')));
+    }
+};
+struct WhiteSpaceOp {
+	really_inline auto operator ()(simd8<uint8_t> _in) const{
+		return _in == simd8<uint8_t>(_mm256_shuffle_epi8(whitespace_table, _in));
+	}
+};
+really_inline json_character_block json_character_block::classify(const simd::simd8x64<uint8_t> in) {
   // We compute whitespace and op separately. If the code later only use one or the
   // other, given the fact that all functions are aggressively inlined, we can
   // hope that useless computations will be omitted. This is namely case when
   // minifying (we only need whitespace).
 
-  uint64_t whitespace = in.map([&](simd8<uint8_t> _in) {
-    return _in == simd8<uint8_t>(_mm256_shuffle_epi8(whitespace_table, _in));
-  }).to_bitmask();
+  uint64_t whitespace = in.map(WhiteSpaceOp{}).to_bitmask();
+  uint64_t op = in.map(Opop{}).to_bitmask();
+  // uint64_t whitespace = in.map([&](simd8<uint8_t> _in) {
+  //   return _in == simd8<uint8_t>(_mm256_shuffle_epi8(whitespace_table, _in));
+  // }).to_bitmask();
 
-  uint64_t op = in.map([&](simd8<uint8_t> _in) {
-    // | 32 handles the fact that { } and [ ] are exactly 32 bytes apart
-    return (_in | 32) == simd8<uint8_t>(_mm256_shuffle_epi8(op_table, _in-','));
-  }).to_bitmask();
+  // uint64_t op = in.map([&](simd8<uint8_t> _in) {
+  //   // | 32 handles the fact that { } and [ ] are exactly 32 bytes apart
+  //   return (_in | 32) == simd8<uint8_t>(_mm256_shuffle_epi8(op_table, _in-','));
+  // }).to_bitmask();
   return { whitespace, op };
 }
 

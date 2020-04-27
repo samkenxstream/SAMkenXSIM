@@ -331,8 +331,6 @@ namespace simd {
       );
     }
 
-    
-
     template <typename R=bool, typename F>
     really_inline simd8x64<R> map(const simd8x64<uint8_t> b, F const& map_chunk) const {
       return simd8x64<R>(
@@ -354,17 +352,20 @@ namespace simd {
 
     really_inline simd8x64<T> bit_or(const T m) const {
       const simd8<T> mask = simd8<T>::splat(m);
-      return this->map( [&](simd8<T> a) { return a | mask; } );
+      // return this->map( [&](simd8<T> a) { return a | mask; } );
+      return simd8x64<T>(this->chunks[0] | mask, this->chunks[1] | mask);
     }
 
     really_inline uint64_t eq(const T m) const {
       const simd8<T> mask = simd8<T>::splat(m);
-      return this->map( [&](simd8<T> a) { return a == mask; } ).to_bitmask();
+      // return this->map( [&](simd8<T> a) { return a == mask; } ).to_bitmask();
+      return simd8x64<bool>(this->chunks[0] == mask, this->chunks[1] == mask).to_bitmask();
     }
 
     really_inline uint64_t lteq(const T m) const {
       const simd8<T> mask = simd8<T>::splat(m);
-      return this->map( [&](simd8<T> a) { return a <= mask; } ).to_bitmask();
+      // return this->map( [&](simd8<T> a) { return a <= mask; } ).to_bitmask();
+      return simd8x64<bool>(this->chunks[0] <= mask, this->chunks[1] <= mask).to_bitmask();
     }
   }; // struct simd8x64<T>
 
