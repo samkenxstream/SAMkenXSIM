@@ -37,7 +37,7 @@ set(THREADS_PREFER_PTHREAD_FLAG ON)
 add_library(simdjson-flags INTERFACE)
 if(MSVC)
   target_compile_options(simdjson-flags INTERFACE /nologo /D_CRT_SECURE_NO_WARNINGS)
-  target_compile_options(simdjson-flags INTERFACE /WX /W3 /sdl)
+  target_compile_options(simdjson-flags INTERFACE /W3 /sdl /arch:AVX2 /GL /Oi /fp:fast /Gv /Ob3)
 else()
   target_compile_options(simdjson-flags INTERFACE -fPIC)
   if (NOT SIMDJSON_GOOGLE_BENCHMARKS) # Google Benchmark can't be compiled without warnings with -Weffc++
