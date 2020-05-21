@@ -353,6 +353,8 @@ public:
   uint8_t *current_string_buf_loc;
   /** @private Buffer being currently parsed */
   const uint8_t *parsing_buf;
+  /** @private Next structural to parse */
+  size_t next_structural;
 
   /** @private Number of structural indices passed from stage 1 to stage 2 */
   uint32_t n_structural_indexes{0};
