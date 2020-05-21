@@ -2,11 +2,10 @@ namespace stage2 {
 
 struct streaming_structural_parser: structural_parser {
   really_inline streaming_structural_parser(
-    const uint8_t *buf,
     size_t len,
     parser &_doc_parser,
     size_t &next_structural
-  ) : structural_parser(buf, len, _doc_parser, next_structural) {}
+  ) : structural_parser(len, _doc_parser, next_structural) {}
 
   // override to add streaming
   WARN_UNUSED really_inline error_code start(UNUSED size_t len) {
@@ -46,7 +45,8 @@ struct streaming_structural_parser: structural_parser {
  * for documentation.
  ***********/
 WARN_UNUSED error_code implementation::stage2(const uint8_t *buf, size_t len, parser &doc_parser, size_t &next_json) const noexcept {
-  stage2::streaming_structural_parser parser(buf, len, doc_parser, next_json);
+  doc_parser.parsing_buf = buf;
+  stage2::streaming_structural_parser parser(len, doc_parser, next_json);
   error_code result = parser.start(len);
   if (result) { return result; }
 

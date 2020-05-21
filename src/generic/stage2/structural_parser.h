@@ -34,21 +34,19 @@ struct structural_parser {
   uint32_t depth;
 
   really_inline structural_parser(
-    const uint8_t *buf,
     size_t len,
     parser &_doc_parser,
     size_t &next_structural
-  ) : structurals(buf, len, _doc_parser.structural_indexes.get(), next_structural),
+  ) : structurals(_doc_parser.parsing_buf, len, _doc_parser.structural_indexes.get(), next_structural),
       doc_parser{_doc_parser},
       depth{0} {
   }
 
   really_inline structural_parser(
-    const uint8_t *buf,
     parser &_doc_parser,
     size_t &next_structural,
     uint32_t _depth
-  ) : structurals(buf, 0, _doc_parser.structural_indexes.get(), next_structural),
+  ) : structurals(_doc_parser.parsing_buf, 0, _doc_parser.structural_indexes.get(), next_structural),
       doc_parser{_doc_parser},
       depth{_depth} {
   }
@@ -244,15 +242,14 @@ struct structural_parser {
   }
 
   WARN_UNUSED really_inline bool parse_object() {
-    return parse_object(structurals.buf, doc_parser, structurals.next_structural, depth+1);
+    return parse_object(doc_parser, structurals.next_structural, depth+1);
   }
 
   WARN_UNUSED static bool parse_object(
-      const uint8_t *buf,
       parser &doc_parser,
       size_t &next_structural,
       uint32_t depth) {
-    structural_parser parser(buf, doc_parser, next_structural, depth);
+    structural_parser parser(doc_parser, next_structural, depth);
     bool result = parser.parse_object_inline();
     next_structural = parser.structurals.next_structural;
     return result;
@@ -302,15 +299,14 @@ struct structural_parser {
   }
 
   WARN_UNUSED really_inline bool parse_array() {
-    return parse_array(structurals.buf, doc_parser, structurals.next_structural, depth+1);
+    return parse_array(doc_parser, structurals.next_structural, depth+1);
   }
 
   WARN_UNUSED static bool parse_array(
-      const uint8_t *buf,
       parser &doc_parser,
       size_t &next_structural,
       uint32_t depth) {
-    structural_parser parser(buf, doc_parser, next_structural, depth);
+    structural_parser parser(doc_parser, next_structural, depth);
     bool result = parser.parse_array_inline();
     next_structural = parser.structurals.next_structural;
     return result;
@@ -461,8 +457,9 @@ struct structural_parser {
  * for documentation.
  ***********/
 WARN_UNUSED error_code implementation::stage2(const uint8_t *buf, size_t len, parser &doc_parser) const noexcept {
+  doc_parser.parsing_buf = buf;
   size_t next_structural = 0;
-  stage2::structural_parser parser(buf, len, doc_parser, next_structural);
+  stage2::structural_parser parser(len, doc_parser, next_structural);
   error_code result = parser.start(len);
   if (result) { return result; }
 
