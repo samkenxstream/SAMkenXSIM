@@ -25,7 +25,7 @@ struct streaming_structural_parser: structural_parser {
     if (depth != 0) {
       return on_error(TAPE_ERROR);
     }
-    if (doc_parser.containing_scope[depth].tape_index != 0) {
+    if (state().containing_scope[depth].tape_index != 0) {
       return on_error(TAPE_ERROR);
     }
     bool finished = structurals.at_end(doc_parser.n_structural_indexes);
