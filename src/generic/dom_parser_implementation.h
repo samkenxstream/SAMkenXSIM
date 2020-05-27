@@ -10,6 +10,9 @@ typedef void* ret_address_t;
 typedef char ret_address_t;
 #endif
 
+/**
+ * Architecture-specific implementation that allocates stage 1 output and stage 2 state
+ */
 class dom_parser_implementation final : public internal::dom_parser_implementation {
 public:
   /** Tape location of each open { or [ */
@@ -20,8 +23,10 @@ public:
   const uint8_t *buf{};
   /** Length passed to stage 1 */
   size_t len{0};
-  /** Document passed to stage 2 */
-  dom::document *doc{};
+  /** Tape from document passed to stage 2 */
+  uint64_t * tape{};
+  /** String buffer from document passed to stage 2 */
+  uint8_t * string_buf{};
   /** Error code (TODO remove, this is not even used, we just set it so the g++ optimizer doesn't get confused) */
   error_code error{UNINITIALIZED};
 
