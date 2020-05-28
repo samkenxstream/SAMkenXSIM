@@ -3,7 +3,7 @@
 namespace logger {
   static constexpr const char * DASHES = "----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------";
 
-  static constexpr const bool LOG_ENABLED = false;
+  static constexpr const bool LOG_ENABLED = true;
   static constexpr const int LOG_EVENT_LEN = 30;
   static constexpr const int LOG_BUFFER_LEN = 20;
   static constexpr const int LOG_DETAIL_LEN = 50;
@@ -55,7 +55,7 @@ namespace logger {
       }
       printf("|    %c ", printable_char(structurals.at_beginning() ? ' ' : structurals.current_char()));
       printf("|    %c ", printable_char(structurals.peek_char()));
-      printf("| %5zd ", structurals.next_structural);
+      printf("| %5zd ", structurals.next_structural, structurals.idx);
       printf("| %-*s ", LOG_DETAIL_LEN, detail);
       printf("|\n");
     }
