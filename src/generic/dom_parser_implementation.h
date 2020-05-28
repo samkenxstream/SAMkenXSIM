@@ -26,9 +26,11 @@ public:
   /** Tape from document passed to stage 2 */
   uint64_t * tape{};
   /** String buffer from document passed to stage 2 */
-  uint8_t * string_buf{};
+  uint8_t *string_buf{};
   /** Error code (TODO remove, this is not even used, we just set it so the g++ optimizer doesn't get confused) */
   error_code error{UNINITIALIZED};
+  /** Streaming parameter to stage1 or stage2 */
+  bool streaming{false};
 
   really_inline dom_parser_implementation();
   dom_parser_implementation(const dom_parser_implementation &) = delete;

@@ -63,9 +63,9 @@ error_code json_minifier::minify(const uint8_t *buf, size_t len, uint8_t *dst, s
     minifier.step<STEP_SIZE>(reader.full_block(), reader);
   }
 
-  if (likely(reader.has_remainder())) {
+  if (likely(reader.has_remainder(len))) {
     uint8_t block[STEP_SIZE];
-    reader.get_remainder(block);
+    reader.get_remainder(block, len);
     minifier.step<STEP_SIZE>(block, reader);
   }
 

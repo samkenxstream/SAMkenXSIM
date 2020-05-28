@@ -158,6 +158,7 @@ template<size_t STEP_SIZE>
 error_code json_structural_indexer::index(const uint8_t *buf, size_t len, dom_parser_implementation &parser, bool streaming) noexcept {
   parser.buf = buf;
   parser.len = len;
+  parser.streaming = streaming;
   if (unlikely(len > parser.capacity())) { return CAPACITY; }
 
   buf_block_reader<STEP_SIZE> reader(buf, len);
@@ -166,13 +167,13 @@ error_code json_structural_indexer::index(const uint8_t *buf, size_t len, dom_pa
     indexer.step<STEP_SIZE>(reader.full_block(), reader);
   }
 
-  if (likely(reader.has_remainder())) {
+  if (likely(reader.has_remainder(parser.len))) {
     uint8_t block[STEP_SIZE];
-    reader.get_remainder(block);
+    reader.get_remainder(block, parser.len);
     indexer.step<STEP_SIZE>(block, reader);
   }
 
-  return indexer.finish(parser, reader.block_index(), len, streaming);
+  return indexer.finish(parser, reader.block_index(), parser.len, parser.streaming);
 }
 
 } // namespace stage1
