@@ -23,7 +23,7 @@ public:
   really_inline simdjson_result<int64_t> get_int64() noexcept;
   // really_inline simdjson_result<bool> get_bool() noexcept;
 
-#ifdef SIMDJSON_EXCEPTIONS
+#if SIMDJSON_EXCEPTIONS
   really_inline operator array() noexcept(false);
   really_inline operator object() noexcept(false);
   really_inline operator raw_json_string() noexcept(false);
@@ -32,6 +32,9 @@ public:
   really_inline operator uint64_t() noexcept(false);
   really_inline operator int64_t() noexcept(false);
   // really_inline operator bool() noexcept(false);
+
+  inline array::iterator begin() noexcept(false);
+  inline array::iterator end() noexcept(false);
 #endif // SIMDJSON_EXCEPTIONS
 
   // TODO users should never have to call this for things to work. Figure out how to make it happen
@@ -45,6 +48,7 @@ protected:
   friend class documents;
   friend class array;
   friend class object;
+  friend class simdjson_result<array>;
   friend class simdjson_result<element>;
   friend class simdjson_result<object>;
 }; // class element
@@ -69,7 +73,7 @@ public:
 
   WARN_UNUSED inline error_code skip() noexcept;
 
-#ifdef SIMDJSON_EXCEPTIONS
+#if SIMDJSON_EXCEPTIONS
   really_inline operator stream::array() noexcept(false);
   really_inline operator stream::object() noexcept(false);
   really_inline operator stream::raw_json_string() noexcept(false);
@@ -78,6 +82,9 @@ public:
   really_inline operator uint64_t() noexcept(false);
   really_inline operator int64_t() noexcept(false);
   // really_inline operator bool() noexcept(false);
+
+  inline stream::array::iterator begin() noexcept(false);
+  inline stream::array::iterator end() noexcept(false);
 #endif // SIMDJSON_EXCEPTIONS
 };
 

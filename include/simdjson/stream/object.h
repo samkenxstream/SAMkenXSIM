@@ -35,7 +35,7 @@ public:
   }; // class iterator
 
   really_inline iterator begin() noexcept;
-  really_inline iterator end() const noexcept;
+  really_inline iterator end() noexcept;
   // Looks up an entry by key, skipping any entries that don't match, with some limitations:
   // - Only supports exact matches of JSON UTF-8 keys. If either the supplied key or the key in JSON
   //   uses escape characters, matching will not work.
@@ -52,7 +52,7 @@ protected:
   friend class element;
   friend class simdjson_result<element>;
   friend class simdjson_result<document>;
-  friend class simdjson_result<stream::object>;
+  friend class simdjson_result<object>;
 }; // class object
 
 } // namespace stream
@@ -65,6 +65,11 @@ public:
   really_inline simdjson_result(stream::object &&value, error_code error) noexcept; ///< @private
 
   really_inline simdjson_result<stream::element> operator[](std::string_view key) noexcept;
+
+#if SIMDJSON_EXCEPTIONS
+  really_inline stream::object::iterator begin() noexcept(false);
+  really_inline stream::object::iterator end() noexcept(false);
+#endif
 };
 
 } // namespace simdjson

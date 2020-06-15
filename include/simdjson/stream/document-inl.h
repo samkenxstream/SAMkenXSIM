@@ -44,7 +44,7 @@ inline error_code document::skip() noexcept {
   return element(json).skip();
 }
 
-#ifdef SIMDJSON_EXCEPTIONS
+#if SIMDJSON_EXCEPTIONS
 really_inline document::operator array() noexcept(false) {
   return element(json);
 }
@@ -69,6 +69,13 @@ really_inline document::operator int64_t() noexcept(false) {
 // really_inline element::operator bool() noexcept(false) {
 //   return element(json);
 // }
+
+inline array::iterator document::begin() noexcept(false) {
+  return get_array().begin();
+}
+inline array::iterator document::end() noexcept(false) {
+  return get_array().end();
+}
 #endif // SIMDJSON_EXCEPTIONS
 
 } // namespace stream
@@ -114,7 +121,7 @@ really_inline simdjson_result<int64_t> simdjson_result<stream::document>::get_in
 //  return first.get_bool();
 // }
 
-#ifdef SIMDJSON_EXCEPTIONS
+#if SIMDJSON_EXCEPTIONS
 really_inline simdjson_result<stream::document>::operator stream::array() noexcept(false) {
   return get_array();
 }
@@ -139,6 +146,13 @@ really_inline simdjson_result<stream::document>::operator int64_t() noexcept(fal
 // really_inline simdjson_result<stream::document>::operator bool() noexcept(false) {
 //   return get_bool();
 // }
+
+inline stream::array::iterator simdjson_result<stream::document>::begin() noexcept(false) {
+  return get_array().begin();
+}
+inline stream::array::iterator simdjson_result<stream::document>::end() noexcept(false) {
+  return get_array().end();
+}
 #endif // SIMDJSON_EXCEPTIONS
 
 } // namespace simdjson

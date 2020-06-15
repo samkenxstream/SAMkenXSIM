@@ -17,7 +17,7 @@ really_inline object::object(internal::json_iterator &_json) noexcept
 really_inline object::iterator object::begin() noexcept {
   return iterator(json); // If it's empty {}, we want it to be at_start (don't iterate)
 }
-really_inline object::iterator object::end() const noexcept {
+really_inline object::iterator object::end() noexcept {
   return iterator(json);
 }
 really_inline simdjson_result<element> object::operator[](std::string_view key) noexcept {
@@ -70,6 +70,19 @@ really_inline simdjson_result<stream::element> simdjson_result<stream::object>::
   if (error()) { return { first.json, error() }; }
   return first[key];
 }
+
+#if SIMDJSON_EXCEPTIONS
+
+really_inline stream::object::iterator simdjson_result<stream::object>::begin() noexcept(false) {
+  if (error()) { throw simdjson_error(error()); }
+  return first.begin();
+}
+really_inline stream::object::iterator simdjson_result<stream::object>::end() noexcept(false) {
+  if (error()) { throw simdjson_error(error()); }
+  return first.end();
+}
+
+#endif // SIMDJSON_EXCEPTIONS
 
 } // namespace simdjson
 

@@ -16,7 +16,7 @@ really_inline array::array(internal::json_iterator &_json) noexcept
 really_inline array::iterator array::begin() noexcept {
   return iterator(json);
 }
-really_inline array::iterator array::end() const noexcept {
+really_inline array::iterator array::end() noexcept {
   return iterator(json);
 }
 
@@ -48,6 +48,28 @@ really_inline bool array::iterator::operator!=(const array::iterator &) noexcept
 }
 
 } // namespace stream
+
+//
+// simdjson_result<stream::array>
+//
+really_inline simdjson_result<stream::array>::simdjson_result(stream::array &&value) noexcept
+    : internal::simdjson_result_base<stream::array>(std::forward<stream::array>(value)) {}
+really_inline simdjson_result<stream::array>::simdjson_result(stream::array &&value, error_code error) noexcept
+    : internal::simdjson_result_base<stream::array>(std::forward<stream::array>(value), error) {}
+
+#if SIMDJSON_EXCEPTIONS
+
+really_inline stream::array::iterator simdjson_result<stream::array>::begin() noexcept(false) {
+  if (error()) { throw simdjson_error(error()); }
+  return first.begin();
+}
+really_inline stream::array::iterator simdjson_result<stream::array>::end() noexcept(false) {
+  if (error()) { throw simdjson_error(error()); }
+  return first.end();
+}
+
+#endif // SIMDJSON_EXCEPTIONS
+
 } // namespace simdjson
 
 #endif // SIMDJSON_STREAM_ARRAY_INL_H

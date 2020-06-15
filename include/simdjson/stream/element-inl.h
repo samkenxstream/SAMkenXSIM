@@ -44,7 +44,7 @@ really_inline simdjson_result<int64_t> element::get_int64() noexcept {
   return internal::parse_integer(json.advance());
 }
 
-#ifdef SIMDJSON_EXCEPTIONS
+#if SIMDJSON_EXCEPTIONS
 really_inline element::operator array() noexcept(false) {
   return get_array();
 }
@@ -69,6 +69,14 @@ really_inline element::operator int64_t() noexcept(false) {
 // really_inline element::operator bool() noexcept(false) {
 //   return get_bool();
 // }
+
+inline array::iterator element::begin() noexcept(false) {
+  return get_array().begin();
+}
+inline array::iterator element::end() noexcept(false) {
+  return get_array().end();
+}
+
 #endif // SIMDJSON_EXCEPTIONS
 
 // TODO users should never have to call this for things to work. Figure out how to make it happen
@@ -141,7 +149,7 @@ really_inline simdjson_result<int64_t> simdjson_result<stream::element>::get_int
 //  return first.get_bool();
 // }
 
-#ifdef SIMDJSON_EXCEPTIONS
+#if SIMDJSON_EXCEPTIONS
 really_inline simdjson_result<stream::element>::operator stream::array() noexcept(false) {
   return get_array();
 }
@@ -166,6 +174,13 @@ really_inline simdjson_result<stream::element>::operator int64_t() noexcept(fals
 // really_inline simdjson_result<stream::element>::operator bool() noexcept(false) {
 //   return get_bool();
 // }
+
+inline stream::array::iterator simdjson_result<stream::element>::begin() noexcept(false) {
+  return get_array().begin();
+}
+inline stream::array::iterator simdjson_result<stream::element>::end() noexcept(false) {
+  return get_array().end();
+}
 #endif // SIMDJSON_EXCEPTIONS
 
 WARN_UNUSED inline error_code simdjson_result<stream::element>::skip() noexcept {

@@ -28,7 +28,7 @@ public:
 
   really_inline error_code skip() noexcept;
 
-#ifdef SIMDJSON_EXCEPTIONS
+#if SIMDJSON_EXCEPTIONS
   really_inline operator array() noexcept(false);
   really_inline operator object() noexcept(false);
   really_inline operator raw_json_string() noexcept(false);
@@ -37,7 +37,11 @@ public:
   really_inline operator uint64_t() noexcept(false);
   really_inline operator int64_t() noexcept(false);
   // really_inline operator bool() noexcept(false);
+
+  inline array::iterator begin() noexcept(false);
+  inline array::iterator end() noexcept(false);
 #endif // SIMDJSON_EXCEPTIONS
+
 
 protected:
   really_inline document(const dom::parser &parser, const uint8_t *buf) noexcept;
@@ -68,7 +72,7 @@ public:
 
   WARN_UNUSED inline error_code skip() noexcept;
 
-#ifdef SIMDJSON_EXCEPTIONS
+#if SIMDJSON_EXCEPTIONS
   really_inline operator stream::array() noexcept(false);
   really_inline operator stream::object() noexcept(false);
   really_inline operator stream::raw_json_string() noexcept(false);
@@ -77,6 +81,9 @@ public:
   really_inline operator uint64_t() noexcept(false);
   really_inline operator int64_t() noexcept(false);
   // really_inline operator bool() noexcept(false);
+
+  inline stream::array::iterator begin() noexcept(false);
+  inline stream::array::iterator end() noexcept(false);
 #endif // SIMDJSON_EXCEPTIONS
 };
 

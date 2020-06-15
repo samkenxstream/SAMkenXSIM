@@ -35,17 +35,31 @@ public:
   }; // class iterator
 
   really_inline iterator begin() noexcept;
-  really_inline iterator end() const noexcept;
+  really_inline iterator end() noexcept;
 
 private:
   really_inline array(internal::json_iterator &json) noexcept;
   internal::json_iterator &json;
   friend class element;
+  friend class simdjson_result<array>;
   friend class simdjson_result<element>;
   friend class simdjson_result<document>;
 }; // class array
 
 } // namespace stream
+
+/** The result of a JSON navigation that may fail. */
+template<>
+struct simdjson_result<stream::array> : public internal::simdjson_result_base<stream::array> {
+public:
+  really_inline simdjson_result(stream::array &&value) noexcept; ///< @private
+  really_inline simdjson_result(stream::array &&value, error_code error) noexcept; ///< @private
+
+#if SIMDJSON_EXCEPTIONS
+  really_inline stream::array::iterator begin() noexcept(false);
+  really_inline stream::array::iterator end() noexcept(false);
+#endif
+};
 
 } // namespace simdjson
 
