@@ -17,6 +17,7 @@ really_inline element::element(internal::json_iterator &_json) noexcept
 }
 
 really_inline simdjson_result<array> element::get_array() noexcept {
+  printf("start array\n");
   if (*json.advance() != '[') { return { json, INCORRECT_TYPE }; }
   return array(json);
 }
@@ -79,30 +80,37 @@ inline array::iterator element::end() noexcept(false) {
 
 #endif // SIMDJSON_EXCEPTIONS
 
-// TODO users should never have to call this for things to work. Figure out how to make it happen
-// in destructors or some other automatic mechanism.
-WARN_UNUSED inline error_code element::skip() noexcept {
+WARN_UNUSED really_inline error_code element::skip() noexcept {
+  printf("skip()\n");
+  // Skip a matching number of open and close braces. We don't validate *anything* inside them;
+  // nor do we validate that they match each other. We only validate elements you actually use.
   switch (*json.advance()) {
-  case '[':
-    printf("skip [\n");
-    for (auto [elem, error] : array(json)) {
-      if (error) { return error; }
-      error = elem.skip();
-      if (error) { return error; }
-    }
-    break;
-  case '{':
-    printf("skip {\n");
-    for (auto [field, error] : object(json)) {
-      printf("field\n");
-      if (error) { return error; }
-      error = field.skip();
-      if (error) { return error; }
-    }
-    break;
-  default:
-    break;
+    case '[':
+    case '{':
+      break;
+    case ']':
+    case '}':
+      return TAPE_ERROR;
+    default:
+      return SUCCESS;
   }
+  // It's an array or hash. Count brackets until we are back to current depth.
+  int depth = 1;
+  do {
+    printf("skip depth %d\n", depth);
+    switch (*json.advance()) {
+    case '[':
+    case '{':
+      depth++;
+      break;
+    case ']':
+    case '}':
+      depth--;
+      break;
+    default:
+      break;
+    }
+  } while (depth > 0);
   return SUCCESS;
 }
 
@@ -175,15 +183,15 @@ really_inline simdjson_result<stream::element>::operator int64_t() noexcept(fals
 //   return get_bool();
 // }
 
-inline stream::array::iterator simdjson_result<stream::element>::begin() noexcept(false) {
+really_inline stream::array::iterator simdjson_result<stream::element>::begin() noexcept(false) {
   return get_array().begin();
 }
-inline stream::array::iterator simdjson_result<stream::element>::end() noexcept(false) {
+really_inline stream::array::iterator simdjson_result<stream::element>::end() noexcept(false) {
   return get_array().end();
 }
 #endif // SIMDJSON_EXCEPTIONS
 
-WARN_UNUSED inline error_code simdjson_result<stream::element>::skip() noexcept {
+WARN_UNUSED really_inline error_code simdjson_result<stream::element>::skip() noexcept {
   if (error()) { return error(); }
   return first.skip();
 }

@@ -33,13 +33,13 @@ public:
   really_inline operator int64_t() noexcept(false);
   // really_inline operator bool() noexcept(false);
 
-  inline array::iterator begin() noexcept(false);
-  inline array::iterator end() noexcept(false);
+  really_inline array::iterator begin() noexcept(false);
+  really_inline array::iterator end() noexcept(false);
 #endif // SIMDJSON_EXCEPTIONS
 
   // TODO users should never have to call this for things to work. Figure out how to make it happen
   // in destructors or some other automatic mechanism.
-  WARN_UNUSED inline error_code skip() noexcept;
+  WARN_UNUSED really_inline error_code skip() noexcept;
 
 protected:
   really_inline element(internal::json_iterator &_json) noexcept;
@@ -71,7 +71,7 @@ public:
   really_inline simdjson_result<int64_t> get_int64() noexcept;
   // really_inline simdjson_result<bool> get_bool() noexcept;
 
-  WARN_UNUSED inline error_code skip() noexcept;
+  WARN_UNUSED really_inline error_code skip() noexcept;
 
 #if SIMDJSON_EXCEPTIONS
   really_inline operator stream::array() noexcept(false);
@@ -83,8 +83,8 @@ public:
   really_inline operator int64_t() noexcept(false);
   // really_inline operator bool() noexcept(false);
 
-  inline stream::array::iterator begin() noexcept(false);
-  inline stream::array::iterator end() noexcept(false);
+  really_inline stream::array::iterator begin() noexcept(false);
+  really_inline stream::array::iterator end() noexcept(false);
 #endif // SIMDJSON_EXCEPTIONS
 };
 

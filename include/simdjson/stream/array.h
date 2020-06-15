@@ -41,6 +41,7 @@ private:
   really_inline array(internal::json_iterator &json) noexcept;
   internal::json_iterator &json;
   friend class element;
+  friend class document;
   friend class simdjson_result<array>;
   friend class simdjson_result<element>;
   friend class simdjson_result<document>;

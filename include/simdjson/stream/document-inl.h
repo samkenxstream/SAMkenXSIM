@@ -48,7 +48,7 @@ inline error_code document::skip() noexcept {
 really_inline document::operator array() noexcept(false) {
   return element(json);
 }
-really_inline document::operator object() noexcept(false ){
+really_inline document::operator object() noexcept(false) {
   return element(json);
 }
 really_inline document::operator raw_json_string() noexcept(false) {
@@ -70,10 +70,10 @@ really_inline document::operator int64_t() noexcept(false) {
 //   return element(json);
 // }
 
-inline array::iterator document::begin() noexcept(false) {
+really_inline array::iterator document::begin() noexcept(false) {
   return get_array().begin();
 }
-inline array::iterator document::end() noexcept(false) {
+really_inline array::iterator document::end() noexcept(false) {
   return get_array().end();
 }
 #endif // SIMDJSON_EXCEPTIONS
@@ -88,11 +88,11 @@ really_inline simdjson_result<stream::document>::simdjson_result(stream::documen
 really_inline simdjson_result<stream::document>::simdjson_result(stream::document &&value, error_code error) noexcept
     : internal::simdjson_result_base<stream::document>(std::forward<stream::document>(value), error) {}
 
-really_inline simdjson_result<stream::array> simdjson_result<stream::document>::get_array() noexcept {
+really_inline simdjson_result<stream::array> simdjson_result<stream::document>::get_array() & noexcept {
   if (error()) { return { first.json, error() }; }
   return first.get_array();
 }
-really_inline simdjson_result<stream::object> simdjson_result<stream::document>::get_object() noexcept {
+really_inline simdjson_result<stream::object> simdjson_result<stream::document>::get_object() & noexcept {
   if (error()) { return { first.json, error() }; }
   return first.get_object();
 }
@@ -147,10 +147,10 @@ really_inline simdjson_result<stream::document>::operator int64_t() noexcept(fal
 //   return get_bool();
 // }
 
-inline stream::array::iterator simdjson_result<stream::document>::begin() noexcept(false) {
+really_inline stream::array::iterator simdjson_result<stream::document>::begin() & noexcept(false) {
   return get_array().begin();
 }
-inline stream::array::iterator simdjson_result<stream::document>::end() noexcept(false) {
+really_inline stream::array::iterator simdjson_result<stream::document>::end() & noexcept(false) {
   return get_array().end();
 }
 #endif // SIMDJSON_EXCEPTIONS
