@@ -393,7 +393,8 @@ namespace stream_tests {
 
     // Parse and iterate through each car
     int count = 0;
-    for (stream::element car : parser.stream(cars_json)) {
+    stream::document doc = parser.stream(cars_json);
+    for (stream::element car : doc) {
       error_code error = car.skip();
       if (error) { std::cerr << "Error: " << error << std::endl; return false; }
       count++;
@@ -402,29 +403,31 @@ namespace stream_tests {
     return true;
   }
 
-  // static bool average_tire_pressure() {
-  //   auto cars_json = R"( [
-  //     { "make": "Toyota", "model": "Camry",  "year": 2018, "tire_pressure": [ 40, 39, 37, 40 ] },
-  //     { "make": "Kia",    "model": "Soul",   "year": 2012, "tire_pressure": [ 30, 31, 28, 28 ] },
-  //     { "make": "Toyota", "model": "Tercel", "year": 1999, "tire_pressure": [ 29, 30, 30, 30 ] }
-  //   ] )"_padded;
-  //   dom::parser parser;
+  static bool average_tire_pressure() {
+    auto cars_json = R"( [
+      { "make": "Toyota", "model": "Camry",  "year": 2018, "tire_pressure": [ 40, 39, 37, 40 ] },
+      { "make": "Kia",    "model": "Soul",   "year": 2012, "tire_pressure": [ 30, 31, 28, 28 ] },
+      { "make": "Toyota", "model": "Tercel", "year": 1999, "tire_pressure": [ 29, 30, 30, 30 ] }
+    ] )"_padded;
+    dom::parser parser;
 
-  //   // Parse and iterate through each car
-  //   for (dom::object car : parser.parse(cars_json)) {
-  //     // Iterating through an array of floats
-  //     uint64_t total_tire_pressure = 0;
-  //     for (uint64_t tire_pressure : car["tire_pressure"]) {
-  //       total_tire_pressure += tire_pressure;
-  //     }
-  //     cout << "- Average tire pressure: " << (total_tire_pressure / 4) << endl;
-  //   }
+    // Parse and iterate through each car
+    for (dom::object car : parser.parse(cars_json)) {
+      // Iterating through an array of floats
+      uint64_t total_tire_pressure = 0;
+      for (uint64_t tire_pressure : car["tire_pressure"]) {
+        total_tire_pressure += tire_pressure;
+      }
+      std::cout << "- Average tire pressure: " << (total_tire_pressure / 4) << std::endl;
+    }
 
-  // }
+    return true;
+  }
 
   static bool run() {
     return true
            && cars_count()
+           && average_tire_pressure()
     ;
   }
 }
