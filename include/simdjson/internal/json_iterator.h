@@ -11,8 +11,8 @@ public:
   really_inline json_iterator(const uint32_t *_structural_index, const uint8_t *_buf, uint8_t *_string_buf)
     : structural_index{_structural_index}, buf{_buf}, string_buf{_string_buf} {}
   json_iterator() = delete;
-  really_inline const uint8_t * advance() noexcept { printf("advance %c (%u)\n", buf[*structural_index], *structural_index); return &buf[*(structural_index++)]; }
-  really_inline const uint8_t * get() const noexcept { printf("get %c (%u)\n", buf[*structural_index], *structural_index); return &buf[*structural_index]; }
+  really_inline const uint8_t * advance() noexcept { return &buf[*(structural_index++)]; }
+  really_inline const uint8_t * get() const noexcept { return &buf[*structural_index]; }
   really_inline const uint8_t * peek_prev() const noexcept { return &buf[*(structural_index-1)]; }
   really_inline const uint8_t * peek_next() const noexcept { return &buf[*(structural_index+1)]; }
 

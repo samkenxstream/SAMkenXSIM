@@ -18,7 +18,7 @@ public:
     really_inline iterator &operator++() noexcept;
     really_inline bool operator!=(const iterator &other) noexcept;
   private:
-    really_inline iterator(internal::json_iterator &json) noexcept;
+    really_inline iterator(internal::json_iterator &json, bool at_start) noexcept;
 
     /** The iterator. This will be updated by element, array and object iterators and get methods */
     internal::json_iterator &json;

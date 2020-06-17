@@ -15,36 +15,48 @@ really_inline object::object(internal::json_iterator &_json) noexcept
 }
 
 really_inline object::iterator object::begin() noexcept {
-  return iterator(json); // If it's empty {}, we want it to be at_start (don't iterate)
+  return iterator(json, true);
 }
 really_inline object::iterator object::end() noexcept {
-  return iterator(json);
+  return iterator(json, false);
 }
 really_inline simdjson_result<element> object::operator[](std::string_view key) noexcept {
+  internal::logger::log_event("lookup key", json);
   for (auto [field, error] : *this) {
-    if (error || key == field.key()) { return { element(field.json), error }; }
+    if (error || key == field.key()) {
+      if (!error) { internal::logger::log_event("found key", json); }
+      return { element(field.json), error };
+    }
   }
+  internal::logger::log_error("no such key", json);
   return { json, NO_SUCH_FIELD };
 }
 
 //
 // object::iterator
 //
-really_inline object::iterator::iterator(internal::json_iterator &_json) noexcept
-  : json{_json} {
+really_inline object::iterator::iterator(internal::json_iterator &_json, bool _at_start) noexcept
+  : json{_json}, at_start{_at_start} {
 }
 really_inline simdjson_result<field> object::iterator::operator*() noexcept {
   // Check the comma
   if (at_start) {
     // If we're at the start, there's nothing to check. != would have bailed on empty {}
+    internal::logger::log_event("first field", json, true);
     at_start = false;
   } else {
-    if (*json.advance() != ',') { return { field(json.get(), json), TAPE_ERROR }; }
+    internal::logger::log_event("next field", json);
+    if (*json.advance() != ',') {
+      internal::logger::log_error("missing ,", json);
+      return { field(json.get(), json), TAPE_ERROR };
+    }
   }
 
   // Get the key and skip the :
   const uint8_t *key = json.advance();
+  if (*key != '"') { assert(error); internal::logger::log_error("non-string key", json); }
   auto error = (*key == '"' && *json.advance() == ':') ? SUCCESS : TAPE_ERROR;
+  if (*json.peek_prev() != ':') { assert(error); internal::logger::log_error("missing :", json); }
   return { field(key, json), error };
 }
 really_inline object::iterator &object::iterator::operator++() noexcept {
@@ -52,7 +64,10 @@ really_inline object::iterator &object::iterator::operator++() noexcept {
 }
 really_inline bool object::iterator::operator!=(const object::iterator &) noexcept {
   // Stop if we hit }
-  if (*json.get() == '}') { json.advance(); return false; }
+  if (*json.get() == '}') {
+    internal::logger::log_end_event("object", json);
+    return false;
+  }
   return true;
 }
 

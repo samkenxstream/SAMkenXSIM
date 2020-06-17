@@ -18,7 +18,7 @@ public:
     really_inline iterator &operator++() noexcept;
     really_inline bool operator!=(const iterator &other) noexcept;
   private:
-    really_inline iterator(internal::json_iterator &json) noexcept;
+    really_inline iterator(internal::json_iterator &json, bool at_start) noexcept;
 
     /** The iterator. This will be updated by element, array and object iterators and get methods */
     internal::json_iterator &json;
@@ -29,7 +29,7 @@ public:
      * the first iteration of a loop from subsequent iterations. We are left with hoping that the
      * compiler will notice at_start gets set to false.
      */
-    bool at_start{true};
+    bool at_start;
 
     friend class object;
   }; // class iterator

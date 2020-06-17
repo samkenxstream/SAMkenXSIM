@@ -45,6 +45,8 @@ public:
 protected:
   really_inline document(const dom::parser &parser, const uint8_t *buf) noexcept;
 
+  really_inline element root() noexcept;
+
   internal::json_iterator json;
 
   friend class dom::parser;
@@ -69,6 +71,8 @@ public:
   really_inline simdjson_result<int64_t> get_int64() noexcept;
   // really_inline simdjson_result<bool> get_bool() noexcept;
 
+  really_inline error_code skip() noexcept;
+
 #if SIMDJSON_EXCEPTIONS
   really_inline operator stream::array() noexcept(false);
   really_inline operator stream::object() noexcept(false);
@@ -82,6 +86,8 @@ public:
   really_inline stream::array::iterator begin() & noexcept(false);
   really_inline stream::array::iterator end() & noexcept(false);
 #endif // SIMDJSON_EXCEPTIONS
+
+  really_inline simdjson_result<stream::element> root() noexcept;
 };
 
 } // namespace simdjson

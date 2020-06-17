@@ -3,6 +3,7 @@
 
 #include "simdjson/common_defs.h"
 #include "simdjson/internal/jsoncharutils.h"
+#include "simdjson/internal/logger.h"
 
 namespace simdjson {
 namespace internal {
@@ -13,35 +14,66 @@ really_inline simdjson_result<double> parse_double(const uint8_t *buf) noexcept;
 
 namespace {
 
+using namespace internal::logger;
+
 // Integers 19 digits or more: 10,000,000,000,000,000,000 to 18,446,744,073,709,551,615
 simdjson_result<uint64_t> convert_large_unsigned(const uint8_t *buf, int digits, uint64_t magnitude) {
+  log_event("  (large unsigned)", buf);
   assert(digits >= 19);
-  if (digits > 19) { return NUMBER_OUT_OF_RANGE; }
-  if (!is_structural_or_whitespace(buf[digits])) { return NUMBER_OUT_OF_RANGE; }
-  if (buf[0] > '1') { return NUMBER_OUT_OF_RANGE; }
-  // 19,999,999,999,999,999,999 is now the biggest number we could have overflowed with. Any number less than 10,000,000,000,000,000,000 is therefore overflow.
-  if (magnitude < 10000000000000000000ULL) { return NUMBER_OUT_OF_RANGE; }
+  if (digits > 19) {
+    log_error("20+ digits", buf);
+    return NUMBER_OUT_OF_RANGE;
+  }
+  if (!is_structural_or_whitespace(buf[digits])) {
+    log_error("followed by non-ws/struct", buf);
+    return NUMBER_OUT_OF_RANGE;
+  }
+  if (buf[0] != '1') {
+    log_error("greater than 2e18", buf);
+    return NUMBER_OUT_OF_RANGE;
+  }
+
+  // We have 19 digits and a leading 1.
+  // 19,999,999,999,999,999,999 is the biggest number the user could have written.
+  // 18,446,744,073,709,551,615 is the biggest number uint64_t could store.
+  //  1,553,255,926,290,448,383 is the overflow of the biggest number we could store.
+  // 10,000,000,000,000,000,000 is the smallest number the user could have written.
+  // We assume that an overflow is lower than that.
+  if (magnitude < 10000000000000000000ULL) {
+    log_error("19-digit overflow", buf);
+    return NUMBER_OUT_OF_RANGE;
+  }
   return magnitude;
 }
 
 // Integers 18 digits or more: 1,000,000,000,000,000,000 to  9,223,372,036,854,775,807
 //                        and -1,000,000,000,000,000,000 to -9,223,372,036,854,775,808
 simdjson_result<int64_t> convert_large_integer(const uint8_t *buf, int digits, uint64_t magnitude, bool negative) {
+  log_event("  (large integer)", buf);
   assert(digits >= 18);
-  if (digits > 18) { return NUMBER_OUT_OF_RANGE; }
-  if (!is_structural_or_whitespace(buf[digits])) { return NUMBER_OUT_OF_RANGE; }
+  if (digits > 18) {
+    log_error("19+ digits", buf);
+    return NUMBER_OUT_OF_RANGE;
+  }
+  if (!is_structural_or_whitespace(buf[digits])) {
+    log_error("followed by non-ws/struct", buf);
+    return NUMBER_OUT_OF_RANGE;
+  }
 
   // The number cannot have actually overflowed since it's stored in an unsigned integer;
   // we just have to check whether it's bigger than INT64_MAX
-  if (negative) {
-    // C++ can't reliably negate uint64_t INT64_MIN, it seems
-    if (magnitude == (uint64_t(INT64_MAX)+1)) { return INT64_MIN; }
-    if (magnitude > uint64_t(INT64_MAX)) { return NUMBER_OUT_OF_RANGE; }
-    return -static_cast<int64_t>(magnitude);
-  } else {
-    if (magnitude > uint64_t(INT64_MAX)) { return NUMBER_OUT_OF_RANGE; }
-    return static_cast<int64_t>(magnitude);
+
+  // C++ can't reliably negate uint64_t INT64_MIN, it seems
+  if (negative && magnitude == (uint64_t(INT64_MAX)+1)) {
+    log_event("  (INT64_MIN)", buf);
+    return INT64_MIN;
   }
+  if (magnitude > uint64_t(INT64_MAX)) {
+    log_error("18-digit overflow", buf);
+    return NUMBER_OUT_OF_RANGE;
+  }
+  return negative ? -static_cast<int64_t>(magnitude) : static_cast<int64_t>(magnitude);
+
 }
 
 } // namespace {}
@@ -52,7 +84,10 @@ really_inline simdjson_result<uint64_t> parse_unsigned(const uint8_t * const buf
   uint64_t magnitude = buf[0] - '0';
   int digits = 1;
   if (magnitude > 0) { // 0 cannot be followed by other digits
-    if (magnitude > 9) { return INCORRECT_TYPE; } // First thing is not a digit
+    if (magnitude > 9) { // First thing is not a digit at all
+      log_error("non-digit start", buf);
+      return INCORRECT_TYPE;
+    }
 
     // Parse remaining digits
     while (1) {
@@ -63,11 +98,16 @@ really_inline simdjson_result<uint64_t> parse_unsigned(const uint8_t * const buf
     }
 
     // Check for massive numbers
-    if (unlikely(digits >= 19)) { return convert_large_unsigned(buf, digits, magnitude); }
+    if (unlikely(digits >= 19)) {
+      return convert_large_unsigned(buf, digits, magnitude);
+    }
   }
 
   // Next character can't be . or e--it must be whitespace, comma, end array or end bracket
-  if (!is_structural_or_whitespace(buf[digits])) { return INCORRECT_TYPE; }
+  if (!is_structural_or_whitespace(buf[digits])) {
+    log_error("followed by non-ws/struct", buf);
+    return INCORRECT_TYPE;
+  }
   return magnitude;
 }
 
@@ -80,7 +120,10 @@ really_inline simdjson_result<int64_t> parse_integer(const uint8_t * buf) noexce
   uint64_t magnitude = buf[0] - '0';
   int digits = 1;
   if (magnitude > 0) { // 0 cannot be followed by other digits
-    if (magnitude > 9) { return INCORRECT_TYPE; } // First thing is not a digit
+    if (magnitude > 9) { // First thing is not a digit at all
+      log_error("non-digit start", buf);
+      return INCORRECT_TYPE;
+    }
 
     // Parse remaining digits
     while (1) {
@@ -91,11 +134,16 @@ really_inline simdjson_result<int64_t> parse_integer(const uint8_t * buf) noexce
     }
 
     // Check for massive numbers
-    if (unlikely(digits >= 19)) { return convert_large_integer(buf, digits, magnitude, negative); }
+    if (unlikely(digits >= 19)) {
+      return convert_large_integer(buf, digits, magnitude, negative);
+    }
   }
 
   // Next character can't be . or e--it must be whitespace, comma, end array or end bracket
-  if (!is_structural_or_whitespace(buf[digits])) { return NUMBER_ERROR; }
+  if (!is_structural_or_whitespace(buf[digits])) {
+    log_error("followed by non-ws/struct", buf);
+    return INCORRECT_TYPE;
+  }
   return magnitude;
 }
 

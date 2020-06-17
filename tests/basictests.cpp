@@ -393,8 +393,7 @@ namespace stream_tests {
 
     // Parse and iterate through each car
     int count = 0;
-    stream::document doc = parser.stream(cars_json);
-    for (stream::element car : doc) {
+    for (stream::element car : parser.stream(cars_json)) {
       error_code error = car.skip();
       if (error) { std::cerr << "Error: " << error << std::endl; return false; }
       count++;
@@ -404,6 +403,7 @@ namespace stream_tests {
   }
 
   static bool average_tire_pressure() {
+    std::cout << "Running " << __func__ << std::endl;
     auto cars_json = R"( [
       { "make": "Toyota", "model": "Camry",  "year": 2018, "tire_pressure": [ 40, 39, 37, 40 ] },
       { "make": "Kia",    "model": "Soul",   "year": 2012, "tire_pressure": [ 30, 31, 28, 28 ] },
@@ -412,7 +412,7 @@ namespace stream_tests {
     dom::parser parser;
 
     // Parse and iterate through each car
-    for (dom::object car : parser.parse(cars_json)) {
+    for (stream::object car : parser.stream(cars_json)) {
       // Iterating through an array of floats
       uint64_t total_tire_pressure = 0;
       for (uint64_t tire_pressure : car["tire_pressure"]) {

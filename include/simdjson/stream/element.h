@@ -23,6 +23,10 @@ public:
   really_inline simdjson_result<int64_t> get_int64() noexcept;
   // really_inline simdjson_result<bool> get_bool() noexcept;
 
+  // TODO users should never have to call this for things to work. Figure out how to make it happen
+  // in destructors or some other automatic mechanism.
+  WARN_UNUSED really_inline error_code skip() noexcept;
+
 #if SIMDJSON_EXCEPTIONS
   really_inline operator array() noexcept(false);
   really_inline operator object() noexcept(false);
@@ -37,10 +41,6 @@ public:
   really_inline array::iterator end() noexcept(false);
 #endif // SIMDJSON_EXCEPTIONS
 
-  // TODO users should never have to call this for things to work. Figure out how to make it happen
-  // in destructors or some other automatic mechanism.
-  WARN_UNUSED really_inline error_code skip() noexcept;
-
 protected:
   really_inline element(internal::json_iterator &_json) noexcept;
   internal::json_iterator &json;
@@ -48,6 +48,7 @@ protected:
   friend class documents;
   friend class array;
   friend class object;
+  friend class simdjson_result<document>;
   friend class simdjson_result<array>;
   friend class simdjson_result<element>;
   friend class simdjson_result<object>;
