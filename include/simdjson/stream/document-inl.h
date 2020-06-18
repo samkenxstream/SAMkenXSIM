@@ -14,6 +14,10 @@ really_inline document::document(const dom::parser &parser, const uint8_t *buf) 
   : json{&parser.implementation->structural_indexes[0], buf, parser.doc.string_buf.get(), 0},
     root{json} {
 }
+really_inline document::document(document && other) noexcept
+  : json(std::forward<internal::json_iterator>(other.json)),
+    root{json, root.consumed} {
+}
 
 really_inline simdjson_result<array> document::get_array() noexcept {
   return root.get_array();

@@ -55,6 +55,7 @@ really_inline bool array_iterator::operator!=(const array_iterator &) noexcept {
   }
   // Stop if we hit ]
   if (*value.json.get() == ']') {
+    value.json.depth--;
     internal::logger::log_end_event("array", value.json);
     value.json.advance();
     return false;

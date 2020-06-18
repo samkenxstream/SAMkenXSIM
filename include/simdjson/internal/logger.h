@@ -5,11 +5,12 @@ namespace simdjson {
 namespace internal {
 namespace logger {
 
-static constexpr const bool LOG_ENABLED = true;
+static constexpr const bool LOG_ENABLED = false;
 static constexpr const char * DASHES = "----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------";
 static constexpr const int LOG_EVENT_LEN = 30;
 static constexpr const int LOG_BUFFER_LEN = 20;
 static constexpr const int LOG_DETAIL_LEN = 50;
+static constexpr const int LOG_DEPTH_LEN = 5;
 
 static int log_depth; // Not threadsafe. Log only.
 
@@ -30,8 +31,8 @@ void log_start() {
   if (LOG_ENABLED) {
     log_depth = 0;
     printf("\n");
-    printf("| %-*s | %-*s | %-*s |\n", LOG_EVENT_LEN, "Event", LOG_BUFFER_LEN, "Buffer", LOG_DETAIL_LEN, "Detail");
-    printf("|%.*s|%.*s|%.*s|\n", LOG_EVENT_LEN+2, DASHES, LOG_BUFFER_LEN+2, DASHES, LOG_DETAIL_LEN+2, DASHES);
+    printf("| %-*s | %-*s | %-*s | %-*s |\n", LOG_EVENT_LEN, "Event", LOG_BUFFER_LEN, "Buffer", LOG_DEPTH_LEN, "Depth", LOG_DETAIL_LEN, "Detail");
+    printf("|%.*s|%.*s|%.*s|%.*s|\n", LOG_EVENT_LEN+2, DASHES, LOG_BUFFER_LEN+2, DASHES, LOG_DEPTH_LEN+2, DASHES, LOG_DETAIL_LEN+2, DASHES);
   }
 }
 
@@ -41,7 +42,7 @@ static really_inline void log_string(const char *message) {
   }
 }
 
-static really_inline void log_event(const char *event_prefix, const char *event, const uint8_t *buf, const char *detail) {
+static really_inline void log_event(const char *event_prefix, const char *event, const uint8_t *buf, const int depth, const char *detail) {
   static_assert(LOG_BUFFER_LEN <= SIMDJSON_PADDING, "LOG_BUFFER_LEN must be smaller than SIMDJSON_PADDING!");
   if (LOG_ENABLED) {
     printf("| %*s%s%-*s ", log_depth*2, "", event_prefix, LOG_EVENT_LEN - log_depth*2 - int(strlen(event_prefix)), event);
@@ -55,6 +56,7 @@ static really_inline void log_event(const char *event_prefix, const char *event,
       }
       printf(" ");
     }
+    printf("| %-d ", depth);
     printf("| %s ", detail);
     printf("|\n");
   }
@@ -62,12 +64,12 @@ static really_inline void log_event(const char *event_prefix, const char *event,
 
 template<typename T>
 static really_inline void log_event(const char *event_prefix, const char *event, T &json, const char *detail, bool prev=false) {
-  log_event(event_prefix, event, prev ? json.peek_prev() : json.get(), detail);
+  log_event(event_prefix, event, prev ? json.peek_prev() : json.get(), json.depth, detail);
 }
 
 template<>
 really_inline void log_event<const uint8_t * const>(const char *event_prefix, const char *event, const uint8_t * const&buf, const char *detail, bool) {
-  log_event(event_prefix, event, buf, detail);
+  log_event(event_prefix, event, buf, 0, detail);
 }
 
 template<typename T>

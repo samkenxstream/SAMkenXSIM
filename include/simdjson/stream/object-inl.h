@@ -72,7 +72,9 @@ really_inline bool object::iterator::operator!=(const object::iterator &) noexce
   }
   // Stop if we hit }
   if (*value.json.get() == '}') {
+    value.json.depth--;
     internal::logger::log_end_event("object", value.json);
+    value.json.advance();
     return false;
   }
   return true;

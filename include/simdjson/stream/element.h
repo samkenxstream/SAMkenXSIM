@@ -43,8 +43,8 @@ public:
 #endif // SIMDJSON_EXCEPTIONS
 
 protected:
-  element(element && other) noexcept;
-  really_inline element(internal::json_iterator &_json) noexcept;
+  really_inline element(element && other) noexcept;
+  really_inline element(internal::json_iterator &_json, bool consumed = false) noexcept;
 
   WARN_UNUSED really_inline bool finish(int parent_depth) noexcept;
 

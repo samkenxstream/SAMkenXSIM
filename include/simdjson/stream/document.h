@@ -17,6 +17,7 @@ namespace stream {
 // A document is basically just a singleton element
 class document {
 public:
+  really_inline document(document && other) noexcept;
   really_inline simdjson_result<array> get_array() noexcept;
   really_inline simdjson_result<object> get_object() noexcept;
   really_inline simdjson_result<raw_json_string> get_raw_json_string() noexcept;

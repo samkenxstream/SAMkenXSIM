@@ -10,7 +10,12 @@ class json_iterator {
 public:
   really_inline json_iterator(const uint32_t *_structural_index, const uint8_t *_buf, uint8_t *_string_buf, int _depth)
     : structural_index{_structural_index}, buf{_buf}, string_buf{_string_buf}, depth{_depth} {}
+  really_inline json_iterator(json_iterator && other) noexcept
+    : structural_index{other.structural_index}, buf{other.buf}, string_buf{other.string_buf}, depth{other.depth} {}
   json_iterator() = delete;
+  // No copying this! Only move.
+  json_iterator(const json_iterator &) = delete;
+  json_iterator &operator=(const json_iterator &) = delete;
   really_inline const uint8_t * advance() noexcept { return &buf[*(structural_index++)]; }
   really_inline const uint8_t * get() const noexcept { return &buf[*structural_index]; }
   really_inline const uint8_t * prev() noexcept { return &buf[*(--structural_index)]; }

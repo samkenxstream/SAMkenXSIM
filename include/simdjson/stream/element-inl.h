@@ -13,11 +13,11 @@ namespace stream {
 //
 // element
 //
-really_inline element::element(internal::json_iterator &_json) noexcept
-  : json{_json} {
+really_inline element::element(internal::json_iterator &_json, bool _consumed) noexcept
+  : json{_json}, consumed{_consumed} {
 }
 really_inline element::element(element && other) noexcept
-  : json{other.json} {
+  : json{other.json}, consumed{other.consumed} {
 }
 
 really_inline simdjson_result<array> element::get_array() noexcept {
@@ -109,8 +109,8 @@ WARN_UNUSED really_inline bool element::finish(int parent_depth) noexcept {
         break;
       case ']':
       case '}':
-        internal::logger::log_end_event("skip", json, true);
         json.depth--;
+        internal::logger::log_end_event("skip", json, true);
         if (json.depth == parent_depth) { return true; }
         break;
       default:
@@ -126,7 +126,7 @@ WARN_UNUSED really_inline bool element::finish(int parent_depth) noexcept {
 really_inline element::operator array() noexcept(false) {
   return get_array();
 }
-really_inline element::operator object() noexcept(false ){
+really_inline element::operator object() noexcept(false) {
   return get_object();
 }
 really_inline element::operator raw_json_string() noexcept(false) {
