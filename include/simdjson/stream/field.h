@@ -8,14 +8,21 @@
 namespace simdjson {
 namespace stream {
 
-class field : public element {
+class field {
 public:
-  really_inline raw_json_string key() { return raw_key; }
+  really_inline raw_json_string key() noexcept { return raw_key; }
+  really_inline element& value() noexcept { return _value; }
 private:
-  really_inline field(const uint8_t * raw_key_buf, internal::json_iterator &_json) : element(_json), raw_key(raw_key_buf) {}
+  really_inline field(const uint8_t * raw_key_buf, element &v) noexcept
+    : raw_key(raw_key_buf), _value{v} {
+  }
+
   raw_json_string raw_key;
+  element &_value;
+
   friend class object;
 };
+
 
 } // namespace stream
 } // namespace simdjson

@@ -11,8 +11,8 @@ namespace stream {
 // documents
 //
 really_inline documents::documents(dom::parser &parser, const uint8_t *buf) noexcept
-  : json(&parser.implementation->structural_indexes[0], buf, parser.doc.string_buf.get()),
-    end_json(&parser.implementation->structural_indexes[parser.implementation->n_structural_indexes], buf, parser.doc.string_buf.get()) {
+  : json(&parser.implementation->structural_indexes[0], buf, parser.doc.string_buf.get(), 0),
+    end_json(&parser.implementation->structural_indexes[parser.implementation->n_structural_indexes], buf, parser.doc.string_buf.get(), 0) {
 }
 really_inline documents::iterator documents::begin() noexcept {
   return iterator(json);

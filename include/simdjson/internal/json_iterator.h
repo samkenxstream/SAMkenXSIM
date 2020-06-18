@@ -8,11 +8,13 @@ namespace internal {
 
 class json_iterator {
 public:
-  really_inline json_iterator(const uint32_t *_structural_index, const uint8_t *_buf, uint8_t *_string_buf)
-    : structural_index{_structural_index}, buf{_buf}, string_buf{_string_buf} {}
+  really_inline json_iterator(const uint32_t *_structural_index, const uint8_t *_buf, uint8_t *_string_buf, int _depth)
+    : structural_index{_structural_index}, buf{_buf}, string_buf{_string_buf}, depth{_depth} {}
   json_iterator() = delete;
   really_inline const uint8_t * advance() noexcept { return &buf[*(structural_index++)]; }
   really_inline const uint8_t * get() const noexcept { return &buf[*structural_index]; }
+  really_inline const uint8_t * prev() noexcept { return &buf[*(--structural_index)]; }
+  really_inline const uint8_t * next() noexcept { return &buf[*(++structural_index)]; }
   really_inline const uint8_t * peek_prev() const noexcept { return &buf[*(structural_index-1)]; }
   really_inline const uint8_t * peek_next() const noexcept { return &buf[*(structural_index+1)]; }
 
@@ -30,6 +32,7 @@ public:
    * potentially copy over each other
    */
   uint8_t *string_buf;
+  int depth;
 }; // class structurals
 
 } // namespace internal

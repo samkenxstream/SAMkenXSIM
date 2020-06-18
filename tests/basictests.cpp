@@ -393,9 +393,7 @@ namespace stream_tests {
 
     // Parse and iterate through each car
     int count = 0;
-    for (stream::element car : parser.stream(cars_json)) {
-      error_code error = car.skip();
-      if (error) { std::cerr << "Error: " << error << std::endl; return false; }
+    for (UNUSED stream::element &car : parser.stream(cars_json)) {
       count++;
     }
     if (count != 3) { std::cerr << "Expected count of cars to be 3, got " << count << std::endl; return false; }

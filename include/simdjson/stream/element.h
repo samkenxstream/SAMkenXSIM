@@ -10,10 +10,15 @@ namespace simdjson {
 namespace stream {
 
 class array;
+class array_iterator;
 class object;
 
 class element {
 public:
+  // No copying; you only get references to this!
+  element(const element &) = delete;
+  bool operator=(const element &) = delete;
+
   really_inline simdjson_result<array> get_array() noexcept;
   really_inline simdjson_result<object> get_object() noexcept;
   really_inline simdjson_result<raw_json_string> get_raw_json_string() noexcept;
@@ -22,10 +27,6 @@ public:
   really_inline simdjson_result<uint64_t> get_uint64() noexcept;
   really_inline simdjson_result<int64_t> get_int64() noexcept;
   // really_inline simdjson_result<bool> get_bool() noexcept;
-
-  // TODO users should never have to call this for things to work. Figure out how to make it happen
-  // in destructors or some other automatic mechanism.
-  WARN_UNUSED really_inline error_code skip() noexcept;
 
 #if SIMDJSON_EXCEPTIONS
   really_inline operator array() noexcept(false);
@@ -37,20 +38,27 @@ public:
   really_inline operator int64_t() noexcept(false);
   // really_inline operator bool() noexcept(false);
 
-  really_inline array::iterator begin() noexcept(false);
-  really_inline array::iterator end() noexcept(false);
+  really_inline array_iterator begin() noexcept(false);
+  really_inline array_iterator end() noexcept(false);
 #endif // SIMDJSON_EXCEPTIONS
 
 protected:
+  element(element && other) noexcept;
   really_inline element(internal::json_iterator &_json) noexcept;
+
+  WARN_UNUSED really_inline bool finish(int parent_depth) noexcept;
+
   internal::json_iterator &json;
+  bool consumed;
+
   friend class document;
   friend class documents;
   friend class array;
+  friend class array_iterator;
   friend class object;
   friend class simdjson_result<document>;
   friend class simdjson_result<array>;
-  friend class simdjson_result<element>;
+  friend class simdjson_result<element&>;
   friend class simdjson_result<object>;
 }; // class element
 
@@ -58,10 +66,10 @@ protected:
 
 /** The result of a JSON navigation that may fail. */
 template<>
-struct simdjson_result<stream::element> : public internal::simdjson_result_base<stream::element> {
+struct simdjson_result<stream::element&> : public internal::simdjson_result_base<stream::element&> {
 public:
-  really_inline simdjson_result(stream::element &&value) noexcept; ///< @private
-  really_inline simdjson_result(stream::element &&value, error_code error) noexcept; ///< @private
+  really_inline simdjson_result(stream::element &value) noexcept; ///< @private
+  really_inline simdjson_result(stream::element &value, error_code error) noexcept; ///< @private
 
   really_inline simdjson_result<stream::array> get_array() noexcept;
   really_inline simdjson_result<stream::object> get_object() noexcept;
@@ -71,8 +79,6 @@ public:
   really_inline simdjson_result<uint64_t> get_uint64() noexcept;
   really_inline simdjson_result<int64_t> get_int64() noexcept;
   // really_inline simdjson_result<bool> get_bool() noexcept;
-
-  WARN_UNUSED really_inline error_code skip() noexcept;
 
 #if SIMDJSON_EXCEPTIONS
   really_inline operator stream::array() noexcept(false);
@@ -84,8 +90,8 @@ public:
   really_inline operator int64_t() noexcept(false);
   // really_inline operator bool() noexcept(false);
 
-  really_inline stream::array::iterator begin() noexcept(false);
-  really_inline stream::array::iterator end() noexcept(false);
+  really_inline stream::array_iterator begin() noexcept(false);
+  really_inline stream::array_iterator end() noexcept(false);
 #endif // SIMDJSON_EXCEPTIONS
 };
 

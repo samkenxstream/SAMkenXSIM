@@ -4,6 +4,7 @@
 #include "simdjson/common_defs.h"
 #include "simdjson/error.h"
 #include "simdjson/internal/json_iterator.h"
+#include "simdjson/stream/element.h"
 
 namespace simdjson {
 namespace stream {
@@ -18,10 +19,12 @@ public:
     really_inline iterator &operator++() noexcept;
     really_inline bool operator!=(const iterator &other) noexcept;
   private:
-    really_inline iterator(internal::json_iterator &json, bool at_start) noexcept;
+    really_inline iterator(element &value, bool at_start) noexcept;
 
-    /** The iterator. This will be updated by element, array and object iterators and get methods */
-    internal::json_iterator &json;
+    element &value;
+
+    int depth;
+
     /**
      * true if we're at the beginning.
      *
@@ -42,15 +45,15 @@ public:
   // - The key must be smaller than SIMDJSON_PADDING+4 (20 character max).
   // - Lookups are *ordered*--looking up "a" and then "b" will fail if "b" comes before "a". Doing a
   //   single lookup per object is guaranteed to work, as long as the key is there.
-  really_inline simdjson_result<element> operator[](std::string_view key) noexcept;
+  really_inline simdjson_result<element&> operator[](std::string_view key) noexcept;
 
 protected:
-  really_inline object(internal::json_iterator &_json) noexcept;
+  really_inline object(internal::json_iterator &json) noexcept;
 
-  internal::json_iterator &json;
+  element value;
 
   friend class element;
-  friend class simdjson_result<element>;
+  friend class simdjson_result<element&>;
   friend class simdjson_result<document>;
   friend class simdjson_result<object>;
 }; // class object
@@ -64,7 +67,7 @@ public:
   really_inline simdjson_result(stream::object &&value) noexcept; ///< @private
   really_inline simdjson_result(stream::object &&value, error_code error) noexcept; ///< @private
 
-  really_inline simdjson_result<stream::element> operator[](std::string_view key) noexcept;
+  really_inline simdjson_result<stream::element&> operator[](std::string_view key) noexcept;
 
 #if SIMDJSON_EXCEPTIONS
   really_inline stream::object::iterator begin() noexcept(false);
