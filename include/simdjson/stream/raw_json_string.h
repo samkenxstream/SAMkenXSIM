@@ -36,7 +36,7 @@ private:
 };
 
 really_inline bool operator==(const raw_json_string &a, std::string_view b) noexcept {
-  return strncmp(a.raw(), b.data(), b.size());
+  return !strncmp(a.raw(), b.data(), b.size());
 }
 
 really_inline bool operator==(std::string_view a, const raw_json_string &b) noexcept {

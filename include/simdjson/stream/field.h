@@ -14,7 +14,7 @@ public:
   really_inline element& value() noexcept { return _value; }
 private:
   really_inline field(const uint8_t * raw_key_buf, element &v) noexcept
-    : raw_key(raw_key_buf), _value{v} {
+    : raw_key(raw_key_buf+1), _value{v} {
   }
 
   raw_json_string raw_key;
