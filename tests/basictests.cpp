@@ -370,6 +370,66 @@ namespace document_tests {
   }
 }
 
+namespace stream_tests {
+  using namespace simdjson;
+  // static bool twitter_count() {
+  //   std::cout << "Running " << __func__ << std::endl;
+  //   // Prints the number of results in twitter.json
+  //   dom::parser parser;
+  //   auto [result_count, error] = parser.load_stream(TWITTER_JSON)["search_metadata"]["count"].get_unsigned();
+  //   if (error) { cerr << "Error: " << error << endl; return false; }
+  //   if (result_count != 100) { cerr << "Expected twitter.json[metadata_count][count] = 100, got " << result_count << endl; return false; }
+  //   return true;
+  // }
+
+  static bool cars_count() {
+    std::cout << "Running " << __func__ << std::endl;
+    auto cars_json = R"( [
+      { "make": "Toyota", "model": "Camry",  "year": 2018, "tire_pressure": [ 40, 39, 37, 40 ] },
+      { "make": "Kia",    "model": "Soul",   "year": 2012, "tire_pressure": [ 30, 31, 28, 28 ] },
+      { "make": "Toyota", "model": "Tercel", "year": 1999, "tire_pressure": [ 29, 30, 30, 30 ] }
+    ] )"_padded;
+    dom::parser parser;
+
+    // Parse and iterate through each car
+    int count = 0;
+    stream::document doc = parser.stream(cars_json);
+    for (stream::element car : doc.get_array()) {
+      error_code error = car.skip();
+      if (error) { std::cerr << "Error: " << error << std::endl; return false; }
+      count++;
+    }
+    if (count != 3) { std::cerr << "Expected count of cars to be 3, got " << count << std::endl; return false; }
+    return true;
+  }
+
+  // static bool average_tire_pressure() {
+  //   auto cars_json = R"( [
+  //     { "make": "Toyota", "model": "Camry",  "year": 2018, "tire_pressure": [ 40, 39, 37, 40 ] },
+  //     { "make": "Kia",    "model": "Soul",   "year": 2012, "tire_pressure": [ 30, 31, 28, 28 ] },
+  //     { "make": "Toyota", "model": "Tercel", "year": 1999, "tire_pressure": [ 29, 30, 30, 30 ] }
+  //   ] )"_padded;
+  //   dom::parser parser;
+
+  //   // Parse and iterate through each car
+  //   for (dom::object car : parser.parse(cars_json)) {
+  //     // Iterating through an array of floats
+  //     uint64_t total_tire_pressure = 0;
+  //     for (uint64_t tire_pressure : car["tire_pressure"]) {
+  //       total_tire_pressure += tire_pressure;
+  //     }
+  //     cout << "- Average tire pressure: " << (total_tire_pressure / 4) << endl;
+  //   }
+
+  // }
+
+  static bool run() {
+    return true
+           && cars_count()
+    ;
+  }
+}
+
 namespace document_stream_tests {
   static simdjson::dom::document_stream parse_many_stream_return(simdjson::dom::parser &parser, simdjson::padded_string &str) {
     simdjson::dom::document_stream stream;
@@ -1966,7 +2026,8 @@ int main(int argc, char *argv[]) {
   std::cout << "------------------------------------------------------------" << std::endl;
 
   std::cout << "Running basic tests." << std::endl;
-  if (validate_tests::run() &&
+  if (true &&
+      stream_tests::run() &&
       minify_tests::run() &&
       parse_api_tests::run() &&
       dom_api_tests::run() &&

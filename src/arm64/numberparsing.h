@@ -2,7 +2,7 @@
 #define SIMDJSON_ARM64_NUMBERPARSING_H
 
 #include "simdjson.h"
-#include "jsoncharutils.h"
+#include "numberparsing_common.h"
 #include "arm64/intrinsics.h"
 #include "arm64/bitmanipulation.h"
 #include <cmath>

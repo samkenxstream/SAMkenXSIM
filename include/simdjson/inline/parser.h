@@ -6,6 +6,7 @@
 #include "simdjson/implementation.h"
 #include "simdjson/internal/jsonformatutils.h"
 #include "simdjson/portability.h"
+#include "simdjson/stream/document.h"
 #include <cstdio>
 #include <climits>
 
@@ -139,6 +140,35 @@ inline simdjson_result<document_stream> parser::parse_many(const std::string &s,
 }
 inline simdjson_result<document_stream> parser::parse_many(const padded_string &s, size_t batch_size) noexcept {
   return parse_many(s.data(), s.length(), batch_size);
+}
+
+inline simdjson_result<stream::document> parser::stream(const uint8_t *buf, size_t len, bool realloc_if_needed) & noexcept {
+  error_code code = ensure_capacity(len);
+  if (code) { return { stream::document(*this, buf), code }; }
+
+  if (realloc_if_needed) {
+    const uint8_t *tmp_buf = buf;
+    buf = (uint8_t *)internal::allocate_padded_buffer(len);
+    if (buf == nullptr) {
+      return { stream::document(*this, buf), MEMALLOC };
+    }
+    memcpy((void *)buf, tmp_buf, len);
+  }
+
+  code = implementation->stage1(buf, len, false);
+  if (realloc_if_needed) {
+    aligned_free((void *)buf); // must free before we exit
+  }
+  return { stream::document(*this, buf), code };
+}
+really_inline simdjson_result<stream::document> parser::stream(const char *buf, size_t len, bool realloc_if_needed) & noexcept {
+  return stream((const uint8_t *)buf, len, realloc_if_needed);
+}
+really_inline simdjson_result<stream::document> parser::stream(const std::string &s) & noexcept {
+  return stream(s.data(), s.length(), s.capacity() - s.length() < SIMDJSON_PADDING);
+}
+really_inline simdjson_result<stream::document> parser::stream(const padded_string &s) & noexcept {
+  return stream(s.data(), s.length(), false);
 }
 
 really_inline size_t parser::capacity() const noexcept {

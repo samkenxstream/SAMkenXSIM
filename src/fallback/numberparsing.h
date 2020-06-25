@@ -2,7 +2,7 @@
 #define SIMDJSON_FALLBACK_NUMBERPARSING_H
 
 #include "simdjson.h"
-#include "jsoncharutils.h"
+#include "numberparsing_common.h"
 #include "fallback/bitmanipulation.h"
 #include <cmath>
 #include <limits>

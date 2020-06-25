@@ -13,6 +13,10 @@ namespace numberparsing {
 #define WRITE_DOUBLE(VALUE, SRC, WRITER) writer.append_double((VALUE))
 #endif
 
+namespace {
+  using namespace simdjson::numberparsing_common;
+}
+
 // Attempts to compute i * 10^(power) exactly; and if "negative" is
 // true, negate the result.
 // This function will only work in some cases, when it does not work, success is
@@ -445,7 +449,7 @@ really_inline bool parse_number(const uint8_t *const src, W &writer) {
       // If it's negative, it has to be INT64_MAX+1 now (or INT64_MIN).
       // C++ can't reliably negate uint64_t INT64_MIN, it seems. Special case it.
       WRITE_INTEGER(INT64_MIN, src, writer);
-      return is_structural_or_whitespace(*p);
+      return internal::is_structural_or_whitespace(*p);
     }
 
     // Positive overflow check:
@@ -469,10 +473,15 @@ really_inline bool parse_number(const uint8_t *const src, W &writer) {
   } else {
     WRITE_INTEGER(negative ? 0 - i : i, src, writer);
   }
-  return is_structural_or_whitespace(*p);
+  return internal::is_structural_or_whitespace(*p);
 }
 
 #endif // SIMDJSON_SKIPNUMBERPARSING
+
+#undef INVALID_NUMBER
+#undef WRITE_INTEGER
+#undef WRITE_UNSIGNED
+#undef WRITE_DOUBLE
 
 } // namespace numberparsing
 } // namespace stage2

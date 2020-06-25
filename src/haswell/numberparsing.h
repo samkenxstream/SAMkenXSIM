@@ -2,8 +2,7 @@
 #define SIMDJSON_HASWELL_NUMBERPARSING_H
 
 #include "simdjson.h"
-
-#include "jsoncharutils.h"
+#include "numberparsing_common.h"
 #include "haswell/intrinsics.h"
 #include "haswell/bitmanipulation.h"
 #include <cmath>

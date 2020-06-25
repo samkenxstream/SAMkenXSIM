@@ -2,7 +2,7 @@
 #define SIMDJSON_WESTMERE_STRINGPARSING_H
 
 #include "simdjson.h"
-#include "jsoncharutils.h"
+#include "stringparsing_common.h"
 #include "westmere/simd.h"
 #include "westmere/intrinsics.h"
 #include "westmere/bitmanipulation.h"

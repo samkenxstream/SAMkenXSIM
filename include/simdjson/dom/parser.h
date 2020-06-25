@@ -14,6 +14,9 @@
 #include <string>
 
 namespace simdjson {
+namespace stream {
+class document;
+} // namespace stream
 
 namespace dom {
 
@@ -91,6 +94,7 @@ public:
    */
   inline simdjson_result<element> load(const std::string &path) & noexcept;
   inline simdjson_result<element> load(const std::string &path) &&  = delete ;
+
   /**
    * Parse a JSON document and return a temporary reference to it.
    *
@@ -140,6 +144,58 @@ public:
 
   /** @private We do not want to allow implicit conversion from C string to std::string. */
   really_inline simdjson_result<element> parse(const char *buf) noexcept = delete;
+
+  /**
+   * Parse a JSON document and return a temporary reference to it.
+   *
+   *   dom::parser parser;
+   *   for (element doc : parser.stream_many(buf, len)) {
+   *     ...
+   *   }
+   *
+   * ### IMPORTANT: Document Lifetime
+   *
+   * The JSON document still lives in the parser: this is the most efficient way to parse JSON
+   * documents because it reuses the same buffers, but you *must* use the document before you
+   * destroy the parser or call stream_many() again.
+   *
+   * ### REQUIRED: Buffer Padding
+   *
+   * The buffer must have at least SIMDJSON_PADDING extra allocated bytes. It does not matter what
+   * those bytes are initialized to, as long as they are allocated.
+   *
+   * If realloc_if_needed is true, it is assumed that the buffer does *not* have enough padding,
+   * and it is copied into an enlarged temporary buffer before parsing.
+   *
+   * ### Parser Capacity
+   *
+   * If the parser's current capacity is less than len, it will allocate enough capacity
+   * to handle it (up to max_capacity).
+   *
+   * @param buf The JSON to parse. Must have at least len + SIMDJSON_PADDING allocated bytes, unless
+   *            realloc_if_needed is true.
+   * @param len The length of the JSON.
+   * @param realloc_if_needed Whether to reallocate and enlarge the JSON buffer to add padding.
+   * @return The document, or an error:
+   *         - MEMALLOC if realloc_if_needed is true or the parser does not have enough capacity,
+   *           and memory allocation fails.
+   *         - CAPACITY if the parser does not have enough capacity and len > max_capacity.
+   *         - other json errors if parsing fails.
+   */
+  inline simdjson_result<stream::document> stream(const uint8_t *buf, size_t len, bool realloc_if_needed = true) & noexcept;
+  inline simdjson_result<stream::document> stream(const uint8_t *buf, size_t len, bool realloc_if_needed = true) && =delete;
+  /** @overload stream_many(const uint8_t *buf, size_t len, bool realloc_if_needed) */
+  really_inline simdjson_result<stream::document> stream(const char *buf, size_t len, bool realloc_if_needed = true) & noexcept;
+  really_inline simdjson_result<stream::document> stream(const char *buf, size_t len, bool realloc_if_needed = true) && =delete;
+  /** @overload stream_many(const uint8_t *buf, size_t len, bool realloc_if_needed) */
+  really_inline simdjson_result<stream::document> stream(const std::string &s) & noexcept;
+  really_inline simdjson_result<stream::document> stream(const std::string &s) && =delete;
+  /** @overload stream_many(const uint8_t *buf, size_t len, bool realloc_if_needed) */
+  really_inline simdjson_result<stream::document> stream(const padded_string &s) & noexcept;
+  really_inline simdjson_result<stream::document> stream(const padded_string &s) && =delete;
+
+  /** @private We do not want to allow implicit conversion from C string to std::string. */
+  really_inline simdjson_result<stream::document> stream(const char *buf) noexcept = delete;
 
   /**
    * Load a file containing many JSON documents.

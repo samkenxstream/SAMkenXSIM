@@ -2,7 +2,7 @@
 #define SIMDJSON_FALLBACK_STRINGPARSING_H
 
 #include "simdjson.h"
-#include "jsoncharutils.h"
+#include "stringparsing_common.h"
 
 namespace simdjson {
 namespace fallback {

@@ -6,6 +6,10 @@
 namespace stage2 {
 namespace stringparsing {
 
+namespace {
+  using namespace simdjson::stringparsing_common;
+}
+
 // begin copypasta
 // These chars yield themselves: " \ /
 // b -> backspace, f -> formfeed, n -> newline, r -> cr, t -> horizontal tab
@@ -44,7 +48,7 @@ really_inline bool handle_unicode_codepoint(const uint8_t **src_ptr,
   // hex_to_u32_nocheck fills high 16 bits of the return value with 1s if the
   // conversion isn't valid; we defer the check for this to inside the
   // multilingual plane check
-  uint32_t code_point = hex_to_u32_nocheck(*src_ptr + 2);
+  uint32_t code_point = stringparsing_common::hex_to_u32_nocheck(*src_ptr + 2);
   *src_ptr += 6;
   // check for low surrogate for characters outside the Basic
   // Multilingual Plane.
@@ -52,7 +56,7 @@ really_inline bool handle_unicode_codepoint(const uint8_t **src_ptr,
     if (((*src_ptr)[0] != '\\') || (*src_ptr)[1] != 'u') {
       return false;
     }
-    uint32_t code_point_2 = hex_to_u32_nocheck(*src_ptr + 2);
+    uint32_t code_point_2 = stringparsing_common::hex_to_u32_nocheck(*src_ptr + 2);
 
     // if the first code point is invalid we will get here, as we will go past
     // the check for being outside the Basic Multilingual plane. If we don't
@@ -67,7 +71,7 @@ really_inline bool handle_unicode_codepoint(const uint8_t **src_ptr,
         (((code_point - 0xd800) << 10) | (code_point_2 - 0xdc00)) + 0x10000;
     *src_ptr += 6;
   }
-  size_t offset = codepoint_to_utf8(code_point, *dst_ptr);
+  size_t offset = stringparsing_common::codepoint_to_utf8(code_point, *dst_ptr);
   *dst_ptr += offset;
   return offset > 0;
 }

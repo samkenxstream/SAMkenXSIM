@@ -13,7 +13,7 @@ really_inline uint32_t str4ncmp(const uint8_t *src, const char* atom) {
 
 WARN_UNUSED
 really_inline bool is_valid_true_atom(const uint8_t *src) {
-  return (str4ncmp(src, "true") | is_not_structural_or_whitespace(src[4])) == 0;
+  return (str4ncmp(src, "true") | internal::is_not_structural_or_whitespace(src[4])) == 0;
 }
 
 WARN_UNUSED
@@ -25,7 +25,7 @@ really_inline bool is_valid_true_atom(const uint8_t *src, size_t len) {
 
 WARN_UNUSED
 really_inline bool is_valid_false_atom(const uint8_t *src) {
-  return (str4ncmp(src+1, "alse") | is_not_structural_or_whitespace(src[5])) == 0;
+  return (str4ncmp(src+1, "alse") | internal::is_not_structural_or_whitespace(src[5])) == 0;
 }
 
 WARN_UNUSED
@@ -37,7 +37,7 @@ really_inline bool is_valid_false_atom(const uint8_t *src, size_t len) {
 
 WARN_UNUSED
 really_inline bool is_valid_null_atom(const uint8_t *src) {
-  return (str4ncmp(src, "null") | is_not_structural_or_whitespace(src[4])) == 0;
+  return (str4ncmp(src, "null") | internal::is_not_structural_or_whitespace(src[4])) == 0;
 }
 
 WARN_UNUSED
