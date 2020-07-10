@@ -4,6 +4,8 @@
 #include "simdjson/common_defs.h"
 #include "simdjson/internal/jsoncharutils.h"
 #include "simdjson/internal/logger.h"
+#include "simdjson/internal/compute_float_64.h"
+#include <cmath>
 
 namespace simdjson {
 namespace internal {
@@ -26,6 +28,35 @@ really_inline bool parse_digit(const uint8_t c, I &i) {
   // PERF NOTE: multiplication by 10 is cheaper than arbitrary integer multiplication
   i = 10 * i + digit; // might overflow, we will handle the overflow later
   return true;
+}
+
+static really_inline simdjson_result<double> parse_float_strtod(const uint8_t *ptr) {
+  char *endptr;
+  double d = strtod((const char *)ptr, &endptr);
+  // Some libraries will set errno = ERANGE when the value is subnormal,
+  // yet we may want to be able to parse subnormal values.
+  // However, we do not want to tolerate NAN or infinite values.
+  //
+  // Values like infinity or NaN are not allowed in the JSON specification.
+  // If you consume a large value and you map it to "infinity", you will no
+  // longer be able to serialize back a standard-compliant JSON. And there is
+  // no realistic application where you might need values so large than they
+  // can't fit in binary64. The maximal value is about  1.7976931348623157 x
+  // 10^308 It is an unimaginable large number. There will never be any piece of
+  // engineering involving as many as 10^308 parts. It is estimated that there
+  // are about 10^80 atoms in the universe.  The estimate for the total number
+  // of electrons is similar. Using a double-precision floating-point value, we
+  // can represent easily the number of atoms in the universe. We could  also
+  // represent the number of ways you can pick any three individual atoms at
+  // random in the universe. If you ever encounter a number much larger than
+  // 10^308, you know that you have a bug. RapidJSON will reject a document with
+  // a float that does not fit in binary64. JSON for Modern C++ (nlohmann/json)
+  // will flat out throw an exception.
+  //
+  if (endptr == (const char *)ptr || !std::isfinite(d)) {
+    return NUMBER_ERROR;
+  }
+  return d;
 }
 
 }; // namespace {}
@@ -117,109 +148,77 @@ really_inline simdjson_result<int64_t> parse_integer(const uint8_t *src) noexcep
   return negative ? 0 - i : i;
 }
 
-// really_inline simdjson_result<double> parse_double(const uint8_t * buf) noexcept {
-//   //
-//   // Negative
-//   //
-//   //    -123.456e-78
-//   //    ^
-//   //
-//   bool negative = (buf[0] == '-');
-//   if (negative) { buf++; }
+really_inline simdjson_result<double> parse_double(const uint8_t * src) noexcept {
+  //
+  // Check for minus sign
+  //
+  bool negative = (*src == '-');
+  src += negative;
 
-//   //
-//   // Magnitude
-//   //
-//   //    -123.456e-78
-//   //     ^^^
-//   //
+  //
+  // Parse the integer part.
+  //
+  uint64_t i = 0;
+  const uint8_t *p = src;
+  p += parse_digit(*p, i);
+  bool leading_zero = (i == 0);
+  while (parse_digit(*p, i)) { p++; }
+  // no integer digits, or 0123 (zero must be solo)
+  if ( p == src || (leading_zero && p != src+1)) { return NUMBER_ERROR; }
 
-//   // Parse the first digit
-//   uint64_t magnitude = buf[0] - '0';
-//   int digits = 1;
-//   if (magnitude > 0) { // 0 cannot be followed by other digits
-//     if (magnitude > 9) { return INCORRECT_TYPE; } // First thing is not a digit
+  //
+  // Parse the decimal part.
+  //
+  int64_t exponent = 0;
+  bool overflow;
+  if (likely(*p == '.')) {
+    p++;
+    const uint8_t *start_decimal_digits = p;
+    if (!parse_digit(*p, i)) { return NUMBER_ERROR; } // no decimal digits
+    p++;
+    while (parse_digit(*p, i)) { p++; }
+    exponent = -(p - start_decimal_digits);
 
-//     // Parse remaining digits
-//     while (1) {
-//       uint8_t digit = static_cast<uint8_t>(buf[digits] - '0');
-//       if (digit > 9) { break; }
-//       magnitude = magnitude * 10 + digit;
-//       digits++;
-//     }
-//   }
+    // Overflow check. 19 digits (minus the decimal) may be overflow.
+    overflow = p-src-1 >= 19;
+    if (unlikely(overflow && leading_zero)) {
+      // Skip leading 0.00000 and see if it still overflows
+      const uint8_t *start_digits = src + 2;
+      while (*start_digits == '0') { start_digits++; }
+      overflow = start_digits-src >= 19;
+    }
+  } else {
+    overflow = p-src >= 19;
+  }
 
-//   //
-//   // Decimal Magnitude
-//   //
-//   //    -123.456e-78
-//   //        ^^^^
-//   //
-//   if (buf[digits] != '.') {
-//     if (buf[digits] == 'e') {
-//       return parse_double_exp(buf, digits, digits, magnitude, negative);
-//     }
-//   }
+  //
+  // Parse the exponent
+  //
+  if (*p == 'e' || *p == 'E') {
+    p++;
+    bool exp_neg = *p == '-';
+    p += exp_neg || *p == '+';
 
-//   int decimal_point = digits;
-//   // Parse remaining decimal point digits
-//   if (buf[digits] == 'e') {
-//     return parse_double_exp(buf, digits, digits, magnitude, negative);
-//   }
-//     decimal_point
-//     // Parse the rest of the digits after the decimal
-//     digits++;
-//     while (1) {
-//       uint8_t digit = buf[digits] - '0';
-//       if (digit > 9) { break; }
-//       magnitude = magnitude * 10 + digit;
-//       digits++;
-//     }
-//   }
+    uint64_t exp = 0;
+    const uint8_t *start_exp_digits = p;
+    while (parse_digit(*p, exp)) { p++; }
+    // no exp digits, or 20+ exp digits
+    if (p-start_exp_digits == 0 || p-start_exp_digits > 19) { return NUMBER_ERROR; }
 
-//   //
-//   // Exponent
-//   //
-//   //    -123.456e-78
-//   //            ^^^^
-//   //
-//   if (buf[digits] == 'e') {
-//     int exp_digits = digits+1;
-//     bool exp_negative = buf[exp_digits] == '-';
-//     if (exp_negative) {
-//       exp_digits++;
-//     }
-//     if (exp_digits) {
+    exponent += exp_neg ? 0-exp : exp;
+    overflow = overflow || exponent < FASTFLOAT_SMALLEST_POWER || exponent > FASTFLOAT_LARGEST_POWER;
+  }
 
-//     }
-
-//     if () {
-//       exp_digits++;
-//     }
-//     bool negative_exp = (buf[digits+1] == '-');
-//     uint16_t exp = buf[exp_signifier+]
-//     if (buf[1] == )
-    
-//   }
-
-//   uint64_t  = buf[0] - '0';
-//   if (result > 0) {
-//     if (result > 9) { return INCORRECT_TYPE; } // First thing is not a digit
-
-//     int digits = 1;
-//     while (1) {
-//       uint8_t digit = buf[digits] - '0';
-//       if (digit > 9) { break; }
-//       result = result * 10 + digit;
-//       digits++;
-//     }
-//     if (digits >= 19) { return OUT_OF_RANGE; } // TODO add parse_large_unsigned
-//   }
-//   if (!is_structural_or_whitespace(buf[digits])) {
-//     return INCORRECT_TYPE;
-//   }
-//   return result;
-// }
+  //
+  // Assemble (or slow-parse) the float
+  //
+  if (likely(!overflow)) {
+    bool success = false;
+    double d = compute_float_64(exponent, i, negative, &success);
+    if (success) { return d; }
+  }
+  return parse_float_strtod(src-negative);
+}
 
 } // internal
 } // simdjson

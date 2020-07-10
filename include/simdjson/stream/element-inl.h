@@ -53,12 +53,12 @@ really_inline simdjson_result<raw_json_string> element::get_raw_json_string() no
 //   if (error) { return error; }
 //   return str.unescape(json.string_buf);
 // }
-// really_inline simdjson_result<double> element::get_double() noexcept {
-//   assert(!consumed);
-//   consumed = true;
-//   internal::logger::log_event("double", json);
-//   return parse_double(json.advance());
-// }
+really_inline simdjson_result<double> element::get_double() noexcept {
+  assert(!consumed);
+  consumed = true;
+  internal::logger::log_event("double", json);
+  return internal::parse_double(json.advance());
+}
 really_inline simdjson_result<uint64_t> element::get_uint64() noexcept {
   assert(!consumed);
   consumed = true;
@@ -135,9 +135,9 @@ really_inline element::operator raw_json_string() noexcept(false) {
 // really_inline element::operator std::string_view() noexcept(false) {
 //   return get_string();
 // }
-// really_inline element::operator double() noexcept(false) {
-//   return get_double();
-// }
+really_inline element::operator double() noexcept(false) {
+  return get_double();
+}
 really_inline element::operator uint64_t() noexcept(false) {
   return get_uint64();
 }
@@ -185,10 +185,10 @@ really_inline simdjson_result<stream::raw_json_string> simdjson_result<stream::e
 //   if (error()) { return error(); }
 //   return first.get_string();
 // }
-// really_inline simdjson_result<double> simdjson_result<stream::element&>::get_double() noexcept {
-//   if (error()) { return error(); }
-//   return first.get_double();
-// }
+really_inline simdjson_result<double> simdjson_result<stream::element&>::get_double() noexcept {
+  if (error()) { return error(); }
+  return first.get_double();
+}
 really_inline simdjson_result<uint64_t> simdjson_result<stream::element&>::get_uint64() noexcept {
   if (error()) { return error(); }
   return first.get_uint64();
@@ -220,10 +220,10 @@ really_inline simdjson_result<stream::element&>::operator stream::raw_json_strin
 //   if (error()) { throw simdjson_error(error()); }
 //   return first;
 // }
-// really_inline simdjson_result<stream::element&>::operator double() noexcept(false) {
-//   if (error()) { throw simdjson_error(error()); }
-//   return first;
-// }
+really_inline simdjson_result<stream::element&>::operator double() noexcept(false) {
+  if (error()) { throw simdjson_error(error()); }
+  return first;
+}
 really_inline simdjson_result<stream::element&>::operator uint64_t() noexcept(false) {
   if (error()) { throw simdjson_error(error()); }
   return first;

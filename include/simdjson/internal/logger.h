@@ -5,7 +5,7 @@ namespace simdjson {
 namespace internal {
 namespace logger {
 
-static constexpr const bool LOG_ENABLED = false;
+static constexpr const bool LOG_ENABLED = true;
 static constexpr const char * DASHES = "----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------";
 static constexpr const int LOG_EVENT_LEN = 30;
 static constexpr const int LOG_BUFFER_LEN = 20;
@@ -68,7 +68,7 @@ static really_inline void log_event(const char *event_prefix, const char *event,
 }
 
 template<>
-really_inline void log_event<const uint8_t * const>(const char *event_prefix, const char *event, const uint8_t * const&buf, const char *detail, bool) {
+really_inline void log_event<const uint8_t * const>(const char *event_prefix, const char *event, const uint8_t * const &buf, const char *detail, bool) {
   log_event(event_prefix, event, buf, 0, detail);
 }
 

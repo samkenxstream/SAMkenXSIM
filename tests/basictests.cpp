@@ -385,9 +385,9 @@ namespace stream_tests {
   static bool cars_count() {
     std::cout << "Running " << __func__ << std::endl;
     auto cars_json = R"( [
-      { "make": "Toyota", "model": "Camry",  "year": 2018, "tire_pressure": [ 40, 39, 37, 40 ] },
-      { "make": "Kia",    "model": "Soul",   "year": 2012, "tire_pressure": [ 30, 31, 28, 28 ] },
-      { "make": "Toyota", "model": "Tercel", "year": 1999, "tire_pressure": [ 29, 30, 30, 30 ] }
+      { "make": "Toyota", "model": "Camry",  "year": 2018, "tire_pressure": [ 40.1, 39.9, 37.7, 40.4 ] },
+      { "make": "Kia",    "model": "Soul",   "year": 2012, "tire_pressure": [ 30.1, 31.0, 28.6, 28.7 ] },
+      { "make": "Toyota", "model": "Tercel", "year": 1999, "tire_pressure": [ 29.8, 30.0, 30.2, 30.5 ] }
     ] )"_padded;
     dom::parser parser;
 
@@ -400,7 +400,7 @@ namespace stream_tests {
     return true;
   }
 
-  static bool average_tire_pressure() {
+  static bool average_tire_pressure_int() {
     std::cout << "Running " << __func__ << std::endl;
     auto cars_json = R"( [
       { "make": "Toyota", "model": "Camry",  "year": 2018, "tire_pressure": [ 40, 39, 37, 40 ] },
@@ -422,9 +422,32 @@ namespace stream_tests {
     return true;
   }
 
+  static bool average_tire_pressure() {
+    std::cout << "Running " << __func__ << std::endl;
+    auto cars_json = R"( [
+      { "make": "Toyota", "model": "Camry",  "year": 2018, "tire_pressure": [ 40.1, 39.9, 37.7, 40.4 ] },
+      { "make": "Kia",    "model": "Soul",   "year": 2012, "tire_pressure": [ 30.1, 31.0, 28.6, 28.7 ] },
+      { "make": "Toyota", "model": "Tercel", "year": 1999, "tire_pressure": [ 29.8, 30.0, 30.2, 30.5 ] }
+    ] )"_padded;
+    dom::parser parser;
+
+    // Parse and iterate through each car
+    for (stream::object car : parser.stream(cars_json)) {
+      // Iterating through an array of floats
+      double total_tire_pressure = 0;
+      for (double tire_pressure : car["tire_pressure"]) {
+        total_tire_pressure += tire_pressure;
+      }
+      std::cout << "- Average tire pressure: " << (total_tire_pressure / 4) << std::endl;
+    }
+
+    return true;
+  }
+
   static bool run() {
     return true
            && cars_count()
+           && average_tire_pressure_int()
            && average_tire_pressure()
     ;
   }

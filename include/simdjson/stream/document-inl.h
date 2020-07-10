@@ -31,9 +31,9 @@ really_inline simdjson_result<raw_json_string> document::get_raw_json_string() n
 // really_inline simdjson_result<std::string_view> document::get_string() noexcept {
 //   return root.get_string();
 // }
-// really_inline simdjson_result<double> document::get_double() noexcept {
-//   return root.get_double();
-// }
+really_inline simdjson_result<double> document::get_double() noexcept {
+  return root.get_double();
+}
 really_inline simdjson_result<uint64_t> document::get_uint64() noexcept {
   return root.get_uint64();
 }
@@ -57,9 +57,9 @@ really_inline document::operator raw_json_string() noexcept(false) {
 // really_inline document::operator std::string_view() noexcept(false) {
 //   return root;
 // }
-// really_inline document::operator double() noexcept(false) {
-//   return root;
-// }
+really_inline document::operator double() noexcept(false) {
+  return root;
+}
 really_inline document::operator uint64_t() noexcept(false) {
   return root;
 }
@@ -100,9 +100,9 @@ really_inline simdjson_result<stream::raw_json_string> simdjson_result<stream::d
 // really_inline simdjson_result<std::string_view> simdjson_result<stream::document>::get_string() noexcept {
 //  return root().get_string();
 // }
-// really_inline simdjson_result<double> simdjson_result<stream::document>::get_double() noexcept {
-//  return root().get_double();
-// }
+really_inline simdjson_result<double> simdjson_result<stream::document>::get_double() noexcept {
+ return root().get_double();
+}
 really_inline simdjson_result<uint64_t> simdjson_result<stream::document>::get_uint64() noexcept {
   return root().get_uint64();
 }
@@ -126,9 +126,9 @@ really_inline simdjson_result<stream::document>::operator stream::raw_json_strin
 // really_inline simdjson_result<stream::document>::operator std::string_view() noexcept(false) {
 //   return root();
 // }
-// really_inline simdjson_result<stream::document>::operator double() noexcept(false) {
-//   return root();
-// }
+really_inline simdjson_result<stream::document>::operator double() noexcept(false) {
+  return root();
+}
 really_inline simdjson_result<stream::document>::operator uint64_t() noexcept(false) {
   return root();
 }
