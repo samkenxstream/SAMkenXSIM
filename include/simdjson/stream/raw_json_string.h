@@ -3,6 +3,7 @@
 
 #include "simdjson/common_defs.h"
 #include "simdjson/error.h"
+#include "simdjson/internal/stringparsing.h"
 
 namespace simdjson {
 namespace stream {
@@ -19,9 +20,13 @@ class field;
 class raw_json_string {
 public:
   really_inline const char * raw() const noexcept { return (const char *)buf; }
-  // really_inline WARN_UNUSED error_code unescape(uint8_t *&dst) const noexcept {
-  //   return simdjson::active_implementation->parse_string(buf, dst);
-  // }
+  really_inline WARN_UNUSED simdjson_result<std::string_view> unescape(uint8_t *&dst) const noexcept {
+    uint8_t *end = internal::stringparsing::parse_string(buf, dst);
+    if (!end) { return STRING_ERROR; }
+    std::string_view result((const char *)dst, end-dst);
+    dst = end;
+    return result;
+  }
 private:
   const uint8_t * const buf;
 

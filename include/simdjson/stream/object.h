@@ -19,21 +19,8 @@ public:
     really_inline iterator &operator++() noexcept;
     really_inline bool operator!=(const iterator &other) noexcept;
   private:
-    really_inline iterator(element &value, bool at_start) noexcept;
-
-    element &value;
-
-    int depth;
-
-    /**
-     * true if we're at the beginning.
-     *
-     * This sorta sucks, but the C++ iterator interface doesn't offer any clever ways to differentiate
-     * the first iteration of a loop from subsequent iterations. We are left with hoping that the
-     * compiler will notice at_start gets set to false.
-     */
-    bool at_start;
-
+    really_inline iterator(object &parent) noexcept;
+    object &parent;
     friend class object;
   }; // class iterator
 
@@ -51,6 +38,17 @@ protected:
   really_inline object(internal::json_iterator &json) noexcept;
 
   element value;
+
+  int depth;
+
+  /**
+    * true if we're at the beginning.
+    *
+    * This sorta sucks, but the C++ iterator interface doesn't offer any clever ways to differentiate
+    * the first iteration of a loop from subsequent iterations. We are left with hoping that the
+    * compiler will notice at_start gets set to false.
+    */
+  bool at_start;
 
   friend class element;
   friend class simdjson_result<element&>;

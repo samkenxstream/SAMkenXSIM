@@ -28,9 +28,9 @@ really_inline simdjson_result<object> document::get_object() noexcept {
 really_inline simdjson_result<raw_json_string> document::get_raw_json_string() noexcept {
   return root.get_raw_json_string();
 }
-// really_inline simdjson_result<std::string_view> document::get_string() noexcept {
-//   return root.get_string();
-// }
+really_inline simdjson_result<std::string_view> document::get_string() noexcept {
+  return root.get_string();
+}
 really_inline simdjson_result<double> document::get_double() noexcept {
   return root.get_double();
 }
@@ -54,9 +54,9 @@ really_inline document::operator object() noexcept(false) {
 really_inline document::operator raw_json_string() noexcept(false) {
   return root;
 }
-// really_inline document::operator std::string_view() noexcept(false) {
-//   return root;
-// }
+really_inline document::operator std::string_view() noexcept(false) {
+  return root;
+}
 really_inline document::operator double() noexcept(false) {
   return root;
 }
@@ -97,9 +97,9 @@ really_inline simdjson_result<stream::object> simdjson_result<stream::document>:
 really_inline simdjson_result<stream::raw_json_string> simdjson_result<stream::document>::get_raw_json_string() noexcept {
   return root().get_raw_json_string();
 }
-// really_inline simdjson_result<std::string_view> simdjson_result<stream::document>::get_string() noexcept {
-//  return root().get_string();
-// }
+really_inline simdjson_result<std::string_view> simdjson_result<stream::document>::get_string() noexcept {
+ return root().get_string();
+}
 really_inline simdjson_result<double> simdjson_result<stream::document>::get_double() noexcept {
  return root().get_double();
 }
@@ -123,9 +123,9 @@ really_inline simdjson_result<stream::document>::operator stream::object() noexc
 really_inline simdjson_result<stream::document>::operator stream::raw_json_string() noexcept(false) {
   return root();
 }
-// really_inline simdjson_result<stream::document>::operator std::string_view() noexcept(false) {
-//   return root();
-// }
+really_inline simdjson_result<stream::document>::operator std::string_view() noexcept(false) {
+  return root();
+}
 really_inline simdjson_result<stream::document>::operator double() noexcept(false) {
   return root();
 }
