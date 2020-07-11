@@ -6,6 +6,7 @@
 #include "simdjson/stream/object.h"
 #include "simdjson/internal/logger.h"
 #include "simdjson/internal/numberparsing.h"
+#include "simdjson/internal/atomparsing.h"
 
 namespace simdjson {
 namespace stream {
@@ -71,6 +72,18 @@ really_inline simdjson_result<int64_t> element::get_int64() noexcept {
   internal::logger::log_event("integer", json);
   return internal::numberparsing::parse_integer(json.advance());
 }
+really_inline simdjson_result<bool> element::get_bool() noexcept {
+  assert(!consumed);
+  consumed = true;
+  internal::logger::log_event("bool", json);
+  auto src = json.advance();
+  bool is_true = internal::atomparsing::str4ncmp(src, "true") == 0;
+  bool is_false = (internal::atomparsing::str4ncmp(src, "fals") | (src[4] ^ 'e')) == 0;
+  if (unlikely((!is_true && !is_false) || internal::is_not_structural_or_whitespace(src[is_true ? 4 : 5]))) {
+    return INCORRECT_TYPE;
+  }
+  return is_true;
+}
 
 WARN_UNUSED really_inline bool element::finish(int parent_depth) noexcept {
   // If the user didn't even do anything with the element, we have to skip it wholesale.
@@ -91,11 +104,15 @@ WARN_UNUSED really_inline bool element::finish(int parent_depth) noexcept {
       case ',':
       case ':':
         // This is not OK. Go backwards.
+        internal::logger::log_event("NOT OK", json, true);
         json.prev();
         return false;
       default:
+        internal::logger::log_event("skip", json, true);
         return true;
     }
+  } else {
+    internal::logger::log_event("already consumed", json, true);
   }
   // Now we're past any scalar values.
   // If we're inside an array or hash, count brackets until we are back to current depth.
@@ -144,9 +161,9 @@ really_inline element::operator uint64_t() noexcept(false) {
 really_inline element::operator int64_t() noexcept(false) {
   return get_int64();
 }
-// really_inline element::operator bool() noexcept(false) {
-//   return get_bool();
-// }
+really_inline element::operator bool() noexcept(false) {
+  return get_bool();
+}
 
 inline array_iterator element::begin() noexcept(false) {
   return get_array().begin();
@@ -197,10 +214,10 @@ really_inline simdjson_result<int64_t> simdjson_result<stream::element&>::get_in
   if (error()) { return error(); }
   return first.get_int64();
 }
-// really_inline simdjson_result<bool> simdjson_result<stream::element&>::get_bool() noexcept {
-//   if (error()) { return error(); }
-//   return first.get_bool();
-// }
+really_inline simdjson_result<bool> simdjson_result<stream::element&>::get_bool() noexcept {
+  if (error()) { return error(); }
+  return first.get_bool();
+}
 
 #if SIMDJSON_EXCEPTIONS
 
@@ -232,10 +249,10 @@ really_inline simdjson_result<stream::element&>::operator int64_t() noexcept(fal
   if (error()) { throw simdjson_error(error()); }
   return first;
 }
-// really_inline simdjson_result<stream::element&>::operator bool() noexcept(false) {
-//   if (error()) { throw simdjson_error(error()); } }
-//   return first;
-// }
+really_inline simdjson_result<stream::element&>::operator bool() noexcept(false) {
+  if (error()) { throw simdjson_error(error()); }
+  return first;
+}
 
 really_inline stream::array_iterator simdjson_result<stream::element&>::begin() noexcept(false) {
   if (error()) { throw simdjson_error(error()); }

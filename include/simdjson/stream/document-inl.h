@@ -40,9 +40,9 @@ really_inline simdjson_result<uint64_t> document::get_uint64() noexcept {
 really_inline simdjson_result<int64_t> document::get_int64() noexcept {
   return root.get_int64();
 }
-// really_inline simdjson_result<bool> document::get_bool() noexcept {
-//   return root.get_bool();
-// }
+really_inline simdjson_result<bool> document::get_bool() noexcept {
+  return root.get_bool();
+}
 
 #if SIMDJSON_EXCEPTIONS
 really_inline document::operator array() noexcept(false) {
@@ -66,9 +66,9 @@ really_inline document::operator uint64_t() noexcept(false) {
 really_inline document::operator int64_t() noexcept(false) {
   return root;
 }
-// really_inline element::operator bool() noexcept(false) {
-//   return root;
-// }
+really_inline document::operator bool() noexcept(false) {
+  return root;
+}
 
 really_inline array_iterator document::begin() noexcept(false) {
   return root.begin();
@@ -109,9 +109,9 @@ really_inline simdjson_result<uint64_t> simdjson_result<stream::document>::get_u
 really_inline simdjson_result<int64_t> simdjson_result<stream::document>::get_int64() noexcept {
   return root().get_int64();
 }
-// really_inline simdjson_result<bool> simdjson_result<stream::document>::get_bool() noexcept {
-//  return root().get_bool();
-// }
+really_inline simdjson_result<bool> simdjson_result<stream::document>::get_bool() noexcept {
+  return root().get_bool();
+}
 
 #if SIMDJSON_EXCEPTIONS
 really_inline simdjson_result<stream::document>::operator stream::array() noexcept(false) {
@@ -135,9 +135,9 @@ really_inline simdjson_result<stream::document>::operator uint64_t() noexcept(fa
 really_inline simdjson_result<stream::document>::operator int64_t() noexcept(false) {
   return root();
 }
-// really_inline simdjson_result<stream::document>::operator bool() noexcept(false) {
-//   return root();
-// }
+really_inline simdjson_result<stream::document>::operator bool() noexcept(false) {
+  return root();
+}
 
 really_inline stream::array_iterator simdjson_result<stream::document>::begin() & noexcept(false) {
   return root().begin();

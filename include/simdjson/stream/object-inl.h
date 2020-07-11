@@ -36,28 +36,28 @@ really_inline simdjson_result<element&> object::operator[](std::string_view key)
 // object::iterator
 //
 really_inline object::iterator::iterator(object &_parent) noexcept
-  : parent(_parent) {
+  : parent{_parent}, value(parent.value.json) {
 }
 really_inline simdjson_result<field> object::iterator::operator*() noexcept {
   // Check the comma
   if (parent.at_start) {
     // If we're at the start, there's nothing to check. != would have bailed on empty {}
-    internal::logger::log_event("first field", parent.value.json, true);
+    internal::logger::log_event("first field", value.json, true);
     parent.at_start = false;
   } else {
-    internal::logger::log_event("next field", parent.value.json);
-    if (*parent.value.json.advance() != ',') {
-      internal::logger::log_error("missing ,", parent.value.json);
-      return { field(parent.value.json.get(), parent.value), TAPE_ERROR };
+    internal::logger::log_event("next field", value.json);
+    if (*value.json.advance() != ',') {
+      internal::logger::log_error("missing ,", value.json);
+      return { field(value.json.get(), value), TAPE_ERROR };
     }
   }
 
   // Get the key and skip the :
-  const uint8_t *key = parent.value.json.advance();
-  if (*key != '"') { assert(error); internal::logger::log_error("non-string key", parent.value.json); }
-  auto error = (*key == '"' && *parent.value.json.advance() == ':') ? SUCCESS : TAPE_ERROR;
-  if (*parent.value.json.peek_prev() != ':') { assert(error); internal::logger::log_error("missing :", parent.value.json); }
-  return { field(key, parent.value), error };
+  const uint8_t *key = value.json.advance();
+  if (*key != '"') { assert(error); internal::logger::log_error("non-string key", value.json); }
+  auto error = (*key == '"' && *value.json.advance() == ':') ? SUCCESS : TAPE_ERROR;
+  if (*value.json.peek_prev() != ':') { assert(error); internal::logger::log_error("missing :", value.json); }
+  return { field(key, value), error };
 }
 really_inline object::iterator &object::iterator::operator++() noexcept {
   return *this;
@@ -66,15 +66,15 @@ really_inline bool object::iterator::operator!=(const object::iterator &) noexce
   // Finish the previous value if it wasn't finished already
   if (!parent.at_start) {
     // If finish() fails, it's because it found a stray } or ]
-    if (!parent.value.finish(parent.depth)) {
+    if (!value.finish(parent.depth)) {
       return true;
     }
   }
   // Stop if we hit }
-  if (*parent.value.json.get() == '}') {
-    parent.value.json.depth--;
-    internal::logger::log_end_event("object", parent.value.json);
-    parent.value.json.advance();
+  if (*value.json.get() == '}') {
+    value.json.depth--;
+    internal::logger::log_end_event("object", value.json);
+    value.json.advance();
     return false;
   }
   return true;

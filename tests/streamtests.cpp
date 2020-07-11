@@ -124,12 +124,36 @@ namespace stream_tests {
     return true;
   }
 
+  static bool busted_cars() {
+    std::cout << "Running " << __func__ << std::endl;
+    auto cars_json = R"( [
+      { "make": "Kia",    "model": "Soul",   "year": 2012, "tire_pressure": [ 30.1, 31.0, 28.6, 28.7 ], "busted": false },
+      { "make": "Toyota", "model": "Camry",  "year": 2018, "tire_pressure": [ 40.1, 39.9, 37.7, 40.4 ], "busted": true },
+      { "make": "Toyota", "model": "Tercel", "year": 1999, "tire_pressure": [ 29.8, 30.0, 30.2, 30.5 ], "busted": false }
+    ] )"_padded;
+    dom::parser parser;
+
+    // Parse and iterate through each car
+    for (stream::object car : parser.stream(cars_json)) {
+      // NOTE this parses the string, but we have to do it before we read the year because we have
+      // a single (hidden) iterator. Let's see if we can avoid the parse unless we choose the car;
+      // a raw_json_string tied to the string writer will probably do fine.
+      std::string_view make = car["make"];
+      std::string_view model = car["model"];
+      if (car["busted"]) {
+        std::cout << make << " " << model << " is busted!" << std::endl;
+      }
+    }
+    return true;
+  }
+
   static bool run() {
     return true
            && cars_count()
            && average_tire_pressure_int()
            && average_tire_pressure()
            && newest_model()
+           && busted_cars()
     ;
   }
 }

@@ -26,7 +26,7 @@ public:
   really_inline simdjson_result<double> get_double() noexcept;
   really_inline simdjson_result<uint64_t> get_uint64() noexcept;
   really_inline simdjson_result<int64_t> get_int64() noexcept;
-  // really_inline simdjson_result<bool> get_bool() noexcept;
+  really_inline simdjson_result<bool> get_bool() noexcept;
 
 #if SIMDJSON_EXCEPTIONS
   really_inline operator array() noexcept(false);
@@ -36,7 +36,7 @@ public:
   really_inline operator double() noexcept(false);
   really_inline operator uint64_t() noexcept(false);
   really_inline operator int64_t() noexcept(false);
-  // really_inline operator bool() noexcept(false);
+  really_inline operator bool() noexcept(false);
 
   really_inline array_iterator begin() noexcept(false);
   really_inline array_iterator end() noexcept(false);
@@ -78,7 +78,7 @@ public:
   really_inline simdjson_result<double> get_double() noexcept;
   really_inline simdjson_result<uint64_t> get_uint64() noexcept;
   really_inline simdjson_result<int64_t> get_int64() noexcept;
-  // really_inline simdjson_result<bool> get_bool() noexcept;
+  really_inline simdjson_result<bool> get_bool() noexcept;
 
 #if SIMDJSON_EXCEPTIONS
   really_inline operator stream::array() noexcept(false);
@@ -88,7 +88,7 @@ public:
   really_inline operator double() noexcept(false);
   really_inline operator uint64_t() noexcept(false);
   really_inline operator int64_t() noexcept(false);
-  // really_inline operator bool() noexcept(false);
+  really_inline operator bool() noexcept(false);
 
   really_inline stream::array_iterator begin() noexcept(false);
   really_inline stream::array_iterator end() noexcept(false);

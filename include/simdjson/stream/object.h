@@ -21,6 +21,7 @@ public:
   private:
     really_inline iterator(object &parent) noexcept;
     object &parent;
+    element value;
     friend class object;
   }; // class iterator
 
