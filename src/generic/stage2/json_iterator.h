@@ -125,7 +125,7 @@ object_field:
   switch (advance()) {
     case '{': if (!empty_object(visitor)) { goto object_begin; }; goto object_continue;
     case '[': if (!empty_array(visitor)) { goto array_begin; }; goto object_continue;
-    default: SIMDJSON_TRY( visitor.primitive(*this, value) );
+    default: SIMDJSON_TRY( visitor.primitive(*this, value) ); goto object_continue;
   }
 
 object_continue:
@@ -153,12 +153,13 @@ array_begin:
   if (depth >= dom_parser.max_depth()) { log_error("Exceeded max depth!"); return DEPTH_ERROR; }
   SIMDJSON_TRY( visitor.start_array(*this) );
   visitor.increment_count(*this);
+  goto array_value;
 
 array_value:
   switch (advance()) {
     case '{': if (!empty_object(visitor)) { goto object_begin; }; goto array_continue;
     case '[': if (!empty_array(visitor)) { goto array_begin; }; goto array_continue;
-    default: SIMDJSON_TRY( visitor.primitive(*this, value) );
+    default: SIMDJSON_TRY( visitor.primitive(*this, value) ); goto array_continue;
   }
 
 array_continue:
@@ -173,10 +174,7 @@ document_end:
 
   dom_parser.next_structural_index = uint32_t(next_structural - &dom_parser.structural_indexes[0]);
 
-  if (depth != 0) {
-    log_error("Unclosed objects or arrays!");
-    return TAPE_ERROR;
-  }
+  if (depth != 0) { log_error("Unclosed objects or arrays!"); return TAPE_ERROR; }
 
   // If we didn't make it to the end, it's an error
   if ( !STREAMING && dom_parser.next_structural_index != dom_parser.n_structural_indexes ) {
