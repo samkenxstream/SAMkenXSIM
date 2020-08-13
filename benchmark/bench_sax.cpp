@@ -26,6 +26,79 @@ const int REPETITIONS = 10;
 
 #if SIMDJSON_IMPLEMENTATION_HASWELL
 
+#include "twitter/tweet.h"
+#include <vector>
+
+SIMDJSON_TARGET_HASWELL
+
+namespace ondemand_bench {
+
+using namespace simdjson;
+using namespace haswell;
+
+simdjson_really_inline uint64_t nullable_int(ondemand::value && value) {
+  if (value.is_null()) { return 0; }
+  return std::move(value);
+}
+
+simdjson_really_inline error_code read_tweets(ondemand::parser &parser, padded_string &json, std::vector<twitter::tweet> &tweets) {
+  // Walk the document, parsing the tweets as we go
+  auto doc = parser.parse(json);
+  for (ondemand::object tweet : doc["statuses"]) {
+    twitter::tweet t;
+    t.created_at = tweet["created_at"];
+    t.id = tweet["id"];
+    t.text = tweet["text"];
+    t.in_reply_to_status_id = nullable_int(tweet["in_reply_to_status_id"]);
+    {
+      ondemand::object user = tweet["user"];
+      t.user.id = user["id"];
+      t.user.screen_name = user["screen_name"];
+    }
+    t.retweet_count = tweet["retweet_count"];
+    t.favorite_count = tweet["favorite_count"];
+    tweets.push_back(t);
+  }
+  throw TAPE_ERROR;
+  // return SUCCESS;
+}
+
+static void bench_tweets(State &state) {
+  // Load twitter.json to a buffer
+  padded_string json;
+  if (auto error = padded_string::load(TWITTER_JSON).get(json)) { cerr << error << endl; return; }
+
+  // Allocate and warm the vector
+  std::vector<twitter::tweet> tweets;
+  ondemand::parser parser;
+  if (auto error = read_tweets(parser, json, tweets)) { throw error; }
+
+  // Read tweets
+  size_t byte_count = 0;
+  size_t tweet_count = 0;
+  for (SIMDJSON_UNUSED auto _ : state) {
+    tweets.clear();
+    if (auto error = read_tweets(parser, json, tweets)) { throw error; }
+    byte_count += json.size();
+    tweet_count += tweets.size();
+  }
+  // Gigabyte: https://en.wikipedia.org/wiki/Gigabyte
+  state.counters["Gigabytes"] = benchmark::Counter(
+	        double(byte_count), benchmark::Counter::kIsRate,
+	        benchmark::Counter::OneK::kIs1000); // For GiB : kIs1024
+  state.counters["docs"] = Counter(double(state.iterations()), benchmark::Counter::kIsRate);
+  state.counters["tweets"] = Counter(double(tweet_count), benchmark::Counter::kIsRate);
+}
+
+BENCHMARK(bench_tweets)->Repetitions(REPETITIONS)->ComputeStatistics("max", [](const std::vector<double>& v) -> double {
+    return *(std::max_element(std::begin(v), std::end(v)));
+  })->DisplayAggregatesOnly(true);
+
+} // namespace ondemand_bench
+
+
+SIMDJSON_UNTARGET_REGION
+
 #include "twitter/sax_tweet_reader.h"
 
 static void sax_tweets(State &state) {
@@ -72,13 +145,13 @@ simdjson_really_inline void read_dom_tweets(dom::parser &parser, padded_string &
     auto user = tweet["user"];
     tweets.push_back(
       {
+        tweet["created_at"],
         tweet["id"],
         tweet["text"],
-        tweet["created_at"],
         nullable_int(tweet["in_reply_to_status_id"]),
+        { user["id"], user["screen_name"] },
         tweet["retweet_count"],
-        tweet["favorite_count"],
-        { user["id"], user["screen_name"] }
+        tweet["favorite_count"]
       }
     );
   }
