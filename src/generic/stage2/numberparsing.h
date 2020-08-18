@@ -7,15 +7,15 @@ namespace stage2 {
 namespace numberparsing {
 
 #ifdef JSON_TEST_NUMBERS
-#define INVALID_NUMBER(SRC) (found_invalid_number((SRC)), false)
-#define WRITE_INTEGER(VALUE, SRC, WRITER) (found_integer((VALUE), (SRC)), writer.append_s64((VALUE)))
-#define WRITE_UNSIGNED(VALUE, SRC, WRITER) (found_unsigned_integer((VALUE), (SRC)), writer.append_u64((VALUE)))
-#define WRITE_DOUBLE(VALUE, SRC, WRITER) (found_float((VALUE), (SRC)), writer.append_double((VALUE)))
+#define INVALID_NUMBER(SRC) (found_invalid_number((SRC)), NUMBER_ERROR)
+#define WRITE_INTEGER(VALUE, SRC, WRITER) (found_integer((VALUE), (SRC)), (WRITER).append_s64((VALUE)))
+#define WRITE_UNSIGNED(VALUE, SRC, WRITER) (found_unsigned_integer((VALUE), (SRC)), (WRITER).append_u64((VALUE)))
+#define WRITE_DOUBLE(VALUE, SRC, WRITER) (found_float((VALUE), (SRC)), (WRITER).append_double((VALUE)))
 #else
-#define INVALID_NUMBER(SRC) (false)
-#define WRITE_INTEGER(VALUE, SRC, WRITER) writer.append_s64((VALUE))
-#define WRITE_UNSIGNED(VALUE, SRC, WRITER) writer.append_u64((VALUE))
-#define WRITE_DOUBLE(VALUE, SRC, WRITER) writer.append_double((VALUE))
+#define INVALID_NUMBER(SRC) (NUMBER_ERROR)
+#define WRITE_INTEGER(VALUE, SRC, WRITER) (WRITER).append_s64((VALUE))
+#define WRITE_UNSIGNED(VALUE, SRC, WRITER) (WRITER).append_u64((VALUE))
+#define WRITE_DOUBLE(VALUE, SRC, WRITER) (WRITER).append_double((VALUE))
 #endif
 
 // Attempts to compute i * 10^(power) exactly; and if "negative" is
@@ -24,7 +24,7 @@ namespace numberparsing {
 // set to false. This should work *most of the time* (like 99% of the time).
 // We assume that power is in the [FASTFLOAT_SMALLEST_POWER,
 // FASTFLOAT_LARGEST_POWER] interval: the caller is responsible for this check.
-really_inline double compute_float_64(int64_t power, uint64_t i, bool negative, bool *success) {
+really_inline bool compute_float_64(int64_t power, uint64_t i, bool negative, double &d) {
   // we start with a fast path
   // It was described in
   // Clinger WD. How to read floating point numbers accurately.
@@ -40,7 +40,7 @@ really_inline double compute_float_64(int64_t power, uint64_t i, bool negative, 
 #endif
     // convert the integer into a double. This is lossless since
     // 0 <= i <= 2^53 - 1.
-    double d = double(i);
+    d = double(i);
     //
     // The general idea is as follows.
     // If 0 <= s < 2^53 and if 10^0 <= p <= 10^22 then
@@ -59,8 +59,7 @@ really_inline double compute_float_64(int64_t power, uint64_t i, bool negative, 
     if (negative) {
       d = -d;
     }
-    *success = true;
-    return d;
+    return true;
   }
   // When 22 < power && power <  22 + 16, we could
   // hope for another, secondary fast path.  It wa
@@ -85,7 +84,8 @@ really_inline double compute_float_64(int64_t power, uint64_t i, bool negative, 
   // In the slow path, we need to adjust i so that it is > 1<<63 which is always
   // possible, except if i == 0, so we handle i == 0 separately.
   if(i == 0) {
-    return 0.0;
+    d = 0.0;
+    return true;
   }
 
   // We are going to need to do some 64-bit arithmetic to get a more precise product.
@@ -135,8 +135,7 @@ really_inline double compute_float_64(int64_t power, uint64_t i, bool negative, 
     // This does happen, e.g. with 7.3177701707893310e+15.
     if (((product_middle + 1 == 0) && ((product_high & 0x1FF) == 0x1FF) &&
          (product_low + i < product_low))) { // let us be prudent and bail out.
-      *success = false;
-      return 0;
+      return false;
     }
     upper = product_high;
     lower = product_middle;
@@ -157,25 +156,24 @@ really_inline double compute_float_64(int64_t power, uint64_t i, bool negative, 
   // floating-point values.
   if (unlikely((lower == 0) && ((upper & 0x1FF) == 0) &&
                ((mantissa & 3) == 1))) {
-      // if mantissa & 1 == 1 we might need to round up.
-      //
-      // Scenarios:
-      // 1. We are not in the middle. Then we should round up.
-      //
-      // 2. We are right in the middle. Whether we round up depends
-      // on the last significant bit: if it is "one" then we round
-      // up (round to even) otherwise, we do not.
-      //
-      // So if the last significant bit is 1, we can safely round up.
-      // Hence we only need to bail out if (mantissa & 3) == 1.
-      // Otherwise we may need more accuracy or analysis to determine whether
-      // we are exactly between two floating-point numbers.
-      // It can be triggered with 1e23.
-      // Note: because the factor_mantissa and factor_mantissa_low are
-      // almost always rounded down (except for small positive powers),
-      // almost always should round up.
-      *success = false;
-      return 0;
+    // if mantissa & 1 == 1 we might need to round up.
+    //
+    // Scenarios:
+    // 1. We are not in the middle. Then we should round up.
+    //
+    // 2. We are right in the middle. Whether we round up depends
+    // on the last significant bit: if it is "one" then we round
+    // up (round to even) otherwise, we do not.
+    //
+    // So if the last significant bit is 1, we can safely round up.
+    // Hence we only need to bail out if (mantissa & 3) == 1.
+    // Otherwise we may need more accuracy or analysis to determine whether
+    // we are exactly between two floating-point numbers.
+    // It can be triggered with 1e23.
+    // Note: because the factor_mantissa and factor_mantissa_low are
+    // almost always rounded down (except for small positive powers),
+    // almost always should round up.
+    return false;
   }
 
   mantissa += mantissa & 1;
@@ -193,15 +191,12 @@ really_inline double compute_float_64(int64_t power, uint64_t i, bool negative, 
   uint64_t real_exponent = c.exp - lz;
   // we have to check that real_exponent is in range, otherwise we bail out
   if (unlikely((real_exponent < 1) || (real_exponent > 2046))) {
-    *success = false;
-    return 0;
+    return false;
   }
   mantissa |= real_exponent << 52;
   mantissa |= (((uint64_t)negative) << 63);
-  double d;
   memcpy(&d, &mantissa, sizeof(d));
-  *success = true;
-  return d;
+  return true;
 }
 
 static bool parse_float_strtod(const uint8_t *ptr, double *outDouble) {
@@ -252,11 +247,11 @@ really_inline bool is_made_of_eight_digits_fast(const uint8_t *chars) {
 }
 
 template<typename W>
-bool slow_float_parsing(UNUSED const uint8_t * src, W writer) {
+error_code slow_float_parsing(UNUSED const uint8_t * src, W writer) {
   double d;
   if (parse_float_strtod(src, &d)) {
-    WRITE_DOUBLE(d, src, writer);
-    return true;
+    writer.append_double(d);
+    return SUCCESS;
   }
   return INVALID_NUMBER(src);
 }
@@ -273,7 +268,7 @@ really_inline bool parse_digit(const uint8_t c, I &i) {
   return true;
 }
 
-really_inline bool parse_decimal(UNUSED const uint8_t *const src, const uint8_t *&p, uint64_t &i, int64_t &exponent) {
+really_inline error_code parse_decimal(UNUSED const uint8_t *const src, const uint8_t *&p, uint64_t &i, int64_t &exponent) {
   // we continue with the fiction that we have an integer. If the
   // floating point number is representable as x * 10^z for some integer
   // z that fits in 53 bits, then we will be able to convert back the
@@ -296,10 +291,10 @@ really_inline bool parse_decimal(UNUSED const uint8_t *const src, const uint8_t 
   if (exponent == 0) {
     return INVALID_NUMBER(src);
   }
-  return true;
+  return SUCCESS;
 }
 
-really_inline bool parse_exponent(UNUSED const uint8_t *const src, const uint8_t *&p, int64_t &exponent) {
+really_inline error_code parse_exponent(UNUSED const uint8_t *const src, const uint8_t *&p, int64_t &exponent) {
   // Exp Sign: -123.456e[-]78
   bool neg_exp = ('-' == *p);
   if (neg_exp || '+' == *p) { p++; } // Skip + as well
@@ -347,38 +342,42 @@ really_inline bool parse_exponent(UNUSED const uint8_t *const src, const uint8_t
   // is bounded in magnitude by the size of the JSON input, we are fine in this universe.
   // To sum it up: the next line should never overflow.
   exponent += (neg_exp ? -exp_number : exp_number);
-  return true;
+  return SUCCESS;
+}
+
+really_inline int significant_digits(const uint8_t * start_digits, int digit_count) {
+  // It is possible that the integer had an overflow.
+  // We have to handle the case where we have 0.0000somenumber.
+  const uint8_t *start = start_digits;
+  while ((*start == '0') || (*start == '.')) {
+    start++;
+  }
+  // we over-decrement by one when there is a '.'
+  return digit_count - int(start - start_digits);
 }
 
 template<typename W>
-really_inline bool write_float(const uint8_t *const src, bool negative, uint64_t i, const uint8_t * start_digits, int digit_count, int64_t exponent, W &writer) {
+really_inline error_code write_float(const uint8_t *const src, bool negative, uint64_t i, const uint8_t * start_digits, int digit_count, int64_t exponent, W &writer) {
   // If we frequently had to deal with long strings of digits,
   // we could extend our code by using a 128-bit integer instead
   // of a 64-bit integer. However, this is uncommon in practice.
   // digit count is off by 1 because of the decimal (assuming there was one).
-  if (unlikely((digit_count-1 >= 19))) { // this is uncommon
-    // It is possible that the integer had an overflow.
-    // We have to handle the case where we have 0.0000somenumber.
-    const uint8_t *start = start_digits;
-    while ((*start == '0') || (*start == '.')) {
-      start++;
-    }
-    // we over-decrement by one when there is a '.'
-    digit_count -= int(start - start_digits);
-    if (digit_count >= 19) {
-      // Ok, chances are good that we had an overflow!
-      // this is almost never going to get called!!!
-      // we start anew, going slowly!!!
-      // This will happen in the following examples:
-      // 10000000000000000000000000000000000000000000e+308
-      // 3.1415926535897932384626433832795028841971693993751
-      //
-      bool success = slow_float_parsing(src, writer);
-      // The number was already written, but we made a copy of the writer
-      // when we passed it to the parse_large_integer() function, so
-      writer.skip_double();
-      return success;
-    }
+  if (unlikely(digit_count-1 >= 19 && significant_digits(start_digits, digit_count) >= 19)) {
+    // Ok, chances are good that we had an overflow!
+    // this is almost never going to get called!!!
+    // we start anew, going slowly!!!
+    // This will happen in the following examples:
+    // 10000000000000000000000000000000000000000000e+308
+    // 3.1415926535897932384626433832795028841971693993751
+    //
+    // NOTE: This makes a *copy* of the writer and passes it to slow_float_parsing. This happens
+    // because slow_float_parsing is a non-inlined function. If we passed our writer reference to
+    // it, it would force it to be stored in memory, preventing the compiler from picking it apart
+    // and putting into registers. i.e. if we pass it as reference, it gets slow.
+    // This is what forces the skip_double, as well.
+    error_code error = slow_float_parsing(src, writer);
+    writer.skip_double();
+    return error;
   }
   // NOTE: it's weird that the unlikely() only wraps half the if, but it seems to get slower any other
   // way we've tried: https://github.com/simdjson/simdjson/pull/990#discussion_r448497331
@@ -386,29 +385,31 @@ really_inline bool write_float(const uint8_t *const src, bool negative, uint64_t
   if (unlikely(exponent < FASTFLOAT_SMALLEST_POWER) || (exponent > FASTFLOAT_LARGEST_POWER)) {
     // this is almost never going to get called!!!
     // we start anew, going slowly!!!
-    bool success = slow_float_parsing(src, writer);
-    // The number was already written, but we made a copy of the writer when we passed it to the
-    // slow_float_parsing() function, so we have to skip those tape spots now that we've returned
+    // NOTE: This makes a *copy* of the writer and passes it to slow_float_parsing. This happens
+    // because slow_float_parsing is a non-inlined function. If we passed our writer reference to
+    // it, it would force it to be stored in memory, preventing the compiler from picking it apart
+    // and putting into registers. i.e. if we pass it as reference, it gets slow.
+    // This is what forces the skip_double, as well.
+    error_code error = slow_float_parsing(src, writer);
     writer.skip_double();
-    return success;
+    return error;
   }
-  bool success = true;
-  double d = compute_float_64(exponent, i, negative, &success);
-  if (!success) {
+  double d;
+  if (!compute_float_64(exponent, i, negative, d)) {
     // we are almost never going to get here.
     if (!parse_float_strtod(src, &d)) { return INVALID_NUMBER(src); }
   }
   WRITE_DOUBLE(d, src, writer);
-  return true;
+  return SUCCESS;
 }
 
 // for performance analysis, it is sometimes  useful to skip parsing
 #ifdef SIMDJSON_SKIPNUMBERPARSING
 
 template<typename W>
-really_inline bool parse_number(const uint8_t *const, W &writer) {
+really_inline error_code parse_number(const uint8_t *const, W &writer) {
   writer.append_s64(0);        // always write zero
-  return true;                 // always succeeds
+  return SUCCESS;              // always succeeds
 }
 
 #else
@@ -423,7 +424,7 @@ really_inline bool parse_number(const uint8_t *const, W &writer) {
 //
 // Our objective is accurate parsing (ULP of 0) at high speed.
 template<typename W>
-really_inline bool parse_number(const uint8_t *const src, W &writer) {
+really_inline error_code parse_number(const uint8_t *const src, W &writer) {
 
   //
   // Check for minus sign
@@ -451,17 +452,19 @@ really_inline bool parse_number(const uint8_t *const src, W &writer) {
   if ('.' == *p) {
     is_float = true;
     ++p;
-    if (!parse_decimal(src, p, i, exponent)) { return false; }
+    SIMDJSON_TRY( parse_decimal(src, p, i, exponent) );
     digit_count = int(p - start_digits); // used later to guard against overflows
   }
   if (('e' == *p) || ('E' == *p)) {
     is_float = true;
     ++p;
-    if (!parse_exponent(src, p, exponent)) { return false; }
+    SIMDJSON_TRY( parse_exponent(src, p, exponent) );
   }
   if (is_float) {
     const bool clean_end = is_structural_or_whitespace(*p);
-    return write_float(src, negative, i, start_digits, digit_count, exponent, writer) && clean_end;
+    SIMDJSON_TRY( write_float(src, negative, i, start_digits, digit_count, exponent, writer) );
+    if (!clean_end) { return INVALID_NUMBER(src); }
+    return SUCCESS;
   }
 
   // The longest negative 64-bit number is 19 digits.
@@ -470,13 +473,12 @@ really_inline bool parse_number(const uint8_t *const src, W &writer) {
   int longest_digit_count = negative ? 19 : 20;
   if (digit_count > longest_digit_count) { return INVALID_NUMBER(src); }
   if (digit_count == longest_digit_count) {
-    if(negative) {
+    if (negative) {
       // Anything negative above INT64_MAX+1 is invalid
-      if (i > uint64_t(INT64_MAX)+1) {
-        return INVALID_NUMBER(src); 
-      }
+      if (i > uint64_t(INT64_MAX)+1) { return INVALID_NUMBER(src);  }
       WRITE_INTEGER(~i+1, src, writer);
-      return is_structural_or_whitespace(*p);
+      if (!is_structural_or_whitespace(*p)) { return INVALID_NUMBER(src); }
+      return SUCCESS;
     // Positive overflow check:
     // - A 20 digit number starting with 2-9 is overflow, because 18,446,744,073,709,551,615 is the
     //   biggest uint64_t.
@@ -498,7 +500,8 @@ really_inline bool parse_number(const uint8_t *const src, W &writer) {
   } else {
     WRITE_INTEGER(negative ? (~i+1) : i, src, writer);
   }
-  return is_structural_or_whitespace(*p);
+  if (!is_structural_or_whitespace(*p)) { return INVALID_NUMBER(src); }
+  return SUCCESS;
 }
 
 // SAX functions
@@ -711,12 +714,10 @@ UNUSED really_inline simdjson_result<double> parse_double(const uint8_t * src) n
   //
   // Assemble (or slow-parse) the float
   //
-  if (likely(!overflow)) {
-    bool success = true;
-    double d = compute_float_64(exponent, i, negative, &success);
-    if (success) { return d; }
-  }
   double d;
+  if (likely(!overflow)) {
+    if (compute_float_64(exponent, i, negative, d)) { return d; }
+  }
   if (!parse_float_strtod(src-negative, &d)) {
     return NUMBER_ERROR;
   }
