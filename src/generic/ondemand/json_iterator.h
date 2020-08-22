@@ -34,7 +34,14 @@ public:
    *
    * @return the object in question.
    */
-  SIMDJSON_WARN_UNUSED simdjson_really_inline simdjson_result<container> start_object() noexcept;
+  SIMDJSON_WARN_UNUSED simdjson_really_inline error_code start_object(container &c) noexcept;
+
+  /**
+   * Check for an opening { and start an object iteration.
+   *
+   * @return the object in question.
+   */
+  SIMDJSON_WARN_UNUSED simdjson_really_inline error_code start_object() noexcept;
 
   /**
    * Start an object iteration after the user has already checked and moved past the {.
@@ -43,7 +50,7 @@ public:
    *
    * @return the object in question.
    */
-  SIMDJSON_WARN_UNUSED simdjson_really_inline container started_object() noexcept;
+  simdjson_really_inline container started_object() noexcept;
 
   /**
    * Checks for empty object.
@@ -66,7 +73,7 @@ public:
    * @return whether there is another field in the object.
    * @error TAPE_ERROR If there is a comma missing between fields.
    */
-  SIMDJSON_WARN_UNUSED simdjson_really_inline simdjson_result<bool> has_next_field() noexcept;
+  SIMDJSON_WARN_UNUSED simdjson_really_inline error_code has_next_field(bool &has_field) noexcept;
 
   /**
    * Moves to the next field in an object, finishing up any unfinished children.
@@ -78,12 +85,12 @@ public:
    *
    * @return whether there is another field in the array.
    */
-  SIMDJSON_WARN_UNUSED simdjson_really_inline simdjson_result<bool> next_field(container c) noexcept;
+  SIMDJSON_WARN_UNUSED simdjson_really_inline error_code next_field(container c, bool &has_field) noexcept;
 
   /**
    * Get the current field's key.
    */
-  SIMDJSON_WARN_UNUSED simdjson_really_inline simdjson_result<raw_json_string> field_key() noexcept;
+  SIMDJSON_WARN_UNUSED simdjson_really_inline error_code field_key(raw_json_string &s) noexcept;
 
   /**
    * Pass the : in the field and move to its value.
@@ -99,60 +106,60 @@ public:
    * unescape it. This works well for typical ASCII and UTF-8 keys (almost all of them), but may
    * fail to match some keys with escapes (\u, \n, etc.).
    */
-  SIMDJSON_WARN_UNUSED simdjson_really_inline simdjson_result<bool> find_field_raw(const char *key) noexcept;
+  SIMDJSON_WARN_UNUSED simdjson_really_inline error_code find_field_raw(const char *key, bool &has_field) noexcept;
 
   /**
    * Find the first field with the given key. Assumes start_object() or started_object() was already
    * called.
    *
-   * Equivalent to:
-   * 
-   *     first_field(key);
-   *     find_field_raw(key)
-   *
-   * Key is *raw JSON,* meaning it will be matched against the verbatim JSON without attempting to
-   * unescape it. This works well for typical ASCII and UTF-8 keys (almost all of them), but may
-   * fail to match some keys with escapes (\u, \n, etc.).
-   */
-  SIMDJSON_WARN_UNUSED simdjson_really_inline simdjson_result<bool> find_first_field_raw(const char *key) noexcept;
-
-  /**
-   * Start an object and move to a single field, by name.
-   * 
-   * For use when you don't intend to do anything else with the object.
-   *
-   * Equivalent to:
+   * Roughly equivalent to:
    * 
    *     start_object(key);
-   *     first_field(key);
-   *     find_field_raw(key)
+   *     if (!is_empty_object(key)) {
+   *       find_field_raw(key);
+   *     }
    *
    * Key is *raw JSON,* meaning it will be matched against the verbatim JSON without attempting to
    * unescape it. This works well for typical ASCII and UTF-8 keys (almost all of them), but may
    * fail to match some keys with escapes (\u, \n, etc.).
    */
-  SIMDJSON_WARN_UNUSED simdjson_really_inline simdjson_result<bool> find_single_field_raw(const char *key) noexcept;
+  SIMDJSON_WARN_UNUSED simdjson_really_inline error_code find_first_field_raw(const char *key, bool &has_field) noexcept;
 
   /**
    * Find the next field with the given key.
    *
-   * Equivalent to:
+   * Roughly equivalent to:
    * 
-   *     next_field(key, container);
-   *     find_field_raw(key)
+   *     if (has_next_field(key)) {
+   *       find_field_raw(key);
+   *     }
    *
    * Key is *raw JSON,* meaning it will be matched against the verbatim JSON without attempting to
    * unescape it. This works well for typical ASCII and UTF-8 keys (almost all of them), but may
    * fail to match some keys with escapes (\u, \n, etc.).
    */
-  SIMDJSON_WARN_UNUSED simdjson_really_inline simdjson_result<bool> find_next_field_raw(const char *key, container c) noexcept;
+  SIMDJSON_WARN_UNUSED simdjson_really_inline error_code find_next_field_raw(const char *key, bool &has_field) noexcept;
+
+  /**
+   * Finish iterating an object.
+   * 
+   * Assumes it is at a , or } (either at the start of an empty object, or after a field in a non-empty object).
+   *
+   * @error TAPE_ERROR if the remaining object fields are missing keys, colons, commas or are unbalanced.
+   */
+  SIMDJSON_WARN_UNUSED simdjson_really_inline error_code finish_object() noexcept;
 
   /**
    * Check for an opening { and start an object iteration.
    *
    * @return the object in question.
    */
-  SIMDJSON_WARN_UNUSED simdjson_really_inline simdjson_result<container> start_array() noexcept;
+  SIMDJSON_WARN_UNUSED simdjson_really_inline error_code start_array(container &c) noexcept;
+
+  /**
+   * Check for an opening { and start an object iteration.
+   */
+  SIMDJSON_WARN_UNUSED simdjson_really_inline error_code start_array() noexcept;
 
   /**
    * Start an array iteration after the user has already checked and moved past the [.
@@ -161,7 +168,7 @@ public:
    *
    * @return the array in question.
    */
-  SIMDJSON_WARN_UNUSED simdjson_really_inline container started_array() noexcept;
+  simdjson_really_inline container started_array() noexcept;
 
   /**
    * Check for empty array.
@@ -184,7 +191,7 @@ public:
    * @return Whether there is another element in the array.
    * @error TAPE_ERROR If there is a comma missing between elements.
    */
-  SIMDJSON_WARN_UNUSED simdjson_really_inline simdjson_result<bool> has_next_element() noexcept;
+  SIMDJSON_WARN_UNUSED simdjson_really_inline error_code has_next_element(bool &has_element) noexcept;
 
   /**
    * Moves to the next element in an array, skipping any unfinished children first.
@@ -192,12 +199,26 @@ public:
    * Roughly equivalent to:
    * 
    *   iter.skip_unfinished_children(c);
-   *   iter.has_next_array();
+   *   iter.has_next_element();
    *
    * @return Whether there is a next element.
    */
-  SIMDJSON_WARN_UNUSED simdjson_really_inline simdjson_result<bool> next_element(container c) noexcept;
+  SIMDJSON_WARN_UNUSED simdjson_really_inline error_code next_element(container c, bool &has_element) noexcept;
 
+  /**
+   * Finish iterating an array.
+   * 
+   * Assumes at least one element has been consumed and it is at a , or }.
+   *
+   * @error TAPE_ERROR if the remaining object fields are missing keys, colons, commas or are unbalanced.
+   */
+  SIMDJSON_WARN_UNUSED simdjson_really_inline error_code finish_array() noexcept;
+
+  SIMDJSON_WARN_UNUSED simdjson_really_inline error_code get_raw_json_string(raw_json_string &s) noexcept;
+  SIMDJSON_WARN_UNUSED simdjson_really_inline error_code get_uint64(uint64_t &i) noexcept;
+  SIMDJSON_WARN_UNUSED simdjson_really_inline error_code get_int64(int64_t &i) noexcept;
+  SIMDJSON_WARN_UNUSED simdjson_really_inline error_code get_double(double &d) noexcept;
+  SIMDJSON_WARN_UNUSED simdjson_really_inline error_code get_bool(bool &b) noexcept;
   SIMDJSON_WARN_UNUSED simdjson_really_inline simdjson_result<raw_json_string> get_raw_json_string() noexcept;
   SIMDJSON_WARN_UNUSED simdjson_really_inline simdjson_result<uint64_t> get_uint64() noexcept;
   SIMDJSON_WARN_UNUSED simdjson_really_inline simdjson_result<int64_t> get_int64() noexcept;
@@ -205,10 +226,10 @@ public:
   SIMDJSON_WARN_UNUSED simdjson_really_inline simdjson_result<bool> get_bool() noexcept;
   simdjson_really_inline bool is_null() noexcept;
 
-  SIMDJSON_WARN_UNUSED simdjson_really_inline simdjson_result<uint64_t> get_root_uint64() noexcept;
-  SIMDJSON_WARN_UNUSED simdjson_really_inline simdjson_result<int64_t> get_root_int64() noexcept;
-  SIMDJSON_WARN_UNUSED simdjson_really_inline simdjson_result<double> get_root_double() noexcept;
-  SIMDJSON_WARN_UNUSED simdjson_really_inline simdjson_result<bool> get_root_bool() noexcept;
+  SIMDJSON_WARN_UNUSED simdjson_really_inline error_code get_root_uint64(uint64_t &i) noexcept;
+  SIMDJSON_WARN_UNUSED simdjson_really_inline error_code get_root_int64(int64_t &i) noexcept;
+  SIMDJSON_WARN_UNUSED simdjson_really_inline error_code get_root_double(double &d) noexcept;
+  SIMDJSON_WARN_UNUSED simdjson_really_inline error_code get_root_bool(bool &b) noexcept;
   simdjson_really_inline bool root_is_null() noexcept;
 
   simdjson_really_inline bool in_container(container c) const noexcept;

@@ -15,7 +15,7 @@ simdjson_really_inline field::field(raw_json_string key, ondemand::value &&value
 simdjson_really_inline simdjson_result<field> field::start(document *doc) noexcept {
   error_code error;
   raw_json_string key;
-  if ((error = doc->iter.field_key().get(key) )) { return { doc, error }; }
+  if ((error = doc->iter.field_key(key) )) { return { doc, error }; }
   if ((error = doc->iter.field_value() )) { return { doc, error }; }
   return field::start(doc, key);
 }

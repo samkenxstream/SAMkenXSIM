@@ -507,7 +507,7 @@ simdjson_really_inline error_code parse_number(const uint8_t *const src, W &writ
 // SAX functions
 namespace {
 // Parse any number from 0 to 18,446,744,073,709,551,615
-SIMDJSON_UNUSED simdjson_really_inline simdjson_result<uint64_t> parse_unsigned(const uint8_t * const src) noexcept {
+SIMDJSON_UNUSED simdjson_really_inline error_code parse_unsigned(const uint8_t * const src, uint64_t &i) noexcept {
   const uint8_t *p = src;
 
   //
@@ -515,7 +515,7 @@ SIMDJSON_UNUSED simdjson_really_inline simdjson_result<uint64_t> parse_unsigned(
   //
   // PERF NOTE: we don't use is_made_of_eight_digits_fast because large integers like 123456789 are rare
   const uint8_t *const start_digits = p;
-  uint64_t i = 0;
+  i = 0;
   while (parse_digit(*p, i)) { p++; }
 
   // If there were no digits, or if the integer starts with 0 and has more than one digit, it's an error.
@@ -542,18 +542,18 @@ SIMDJSON_UNUSED simdjson_really_inline simdjson_result<uint64_t> parse_unsigned(
     if (src[0] != uint8_t('1') || i <= uint64_t(INT64_MAX)) { return NUMBER_ERROR; }
   }
 
-  return i;
+  return SUCCESS;
 }
 
 // Parse any number from 0 to 18,446,744,073,709,551,615
 // Call this version of the method if you regularly expect 8- or 16-digit numbers.
-SIMDJSON_UNUSED simdjson_really_inline simdjson_result<uint64_t> parse_large_unsigned(const uint8_t * const src) noexcept {
+SIMDJSON_UNUSED simdjson_really_inline error_code parse_large_unsigned(const uint8_t * const src, uint64_t &i) noexcept {
   const uint8_t *p = src;
 
   //
   // Parse the integer part.
   //
-  uint64_t i = 0;
+  i = 0;
   if (is_made_of_eight_digits_fast(p)) {
     i = i * 100000000 + parse_eight_digits_unrolled(p);
     p += 8;
@@ -597,11 +597,11 @@ SIMDJSON_UNUSED simdjson_really_inline simdjson_result<uint64_t> parse_large_uns
   // If there were no digits, or if the integer starts with 0 and has more than one digit, it's an error.
   int digit_count = int(p - src);
   if (digit_count == 0 || ('0' == *src && digit_count > 1)) { return NUMBER_ERROR; }
-  return i;
+  return SUCCESS;
 }
 
 // Parse any number from  -9,223,372,036,854,775,808 to 9,223,372,036,854,775,807
-SIMDJSON_UNUSED simdjson_really_inline simdjson_result<int64_t> parse_integer(const uint8_t *src) noexcept {
+SIMDJSON_UNUSED simdjson_really_inline error_code parse_integer(const uint8_t *src, int64_t &result) noexcept {
   //
   // Check for minus sign
   //
@@ -630,7 +630,8 @@ SIMDJSON_UNUSED simdjson_really_inline simdjson_result<int64_t> parse_integer(co
     if(negative) {
       // Anything negative above INT64_MAX+1 is invalid
       if (i > uint64_t(INT64_MAX)+1) { return NUMBER_ERROR; }
-      return ~i+1;
+      result = ~i+1;
+      return SUCCESS;
 
     // Positive overflow check:
     // - A 20 digit number starting with 2-9 is overflow, because 18,446,744,073,709,551,615 is the
@@ -647,10 +648,11 @@ SIMDJSON_UNUSED simdjson_really_inline simdjson_result<int64_t> parse_integer(co
     } else if (src[0] != uint8_t('1') || i <= uint64_t(INT64_MAX)) { return NUMBER_ERROR; }
   }
 
-  return negative ? (~i+1) : i;
+  result = negative ? (~i+1) : i;
+  return SUCCESS;
 }
 
-SIMDJSON_UNUSED simdjson_really_inline simdjson_result<double> parse_double(const uint8_t * src) noexcept {
+SIMDJSON_UNUSED simdjson_really_inline error_code parse_double(const uint8_t * src, double &d) noexcept {
   //
   // Check for minus sign
   //
@@ -716,14 +718,13 @@ SIMDJSON_UNUSED simdjson_really_inline simdjson_result<double> parse_double(cons
   //
   // Assemble (or slow-parse) the float
   //
-  double d;
   if (simdjson_likely(!overflow)) {
-    if (compute_float_64(exponent, i, negative, d)) { return d; }
+    if (compute_float_64(exponent, i, negative, d)) { return SUCCESS; }
   }
   if (!parse_float_strtod(src-negative, &d)) {
     return NUMBER_ERROR;
   }
-  return d;
+  return SUCCESS;
 }
 } //namespace {}
 #endif // SIMDJSON_SKIPNUMBERPARSING

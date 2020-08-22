@@ -21,6 +21,8 @@ public:
   simdjson_really_inline const char * raw() const noexcept;
   simdjson_really_inline SIMDJSON_WARN_UNUSED simdjson_result<std::string_view> unescape(uint8_t *&dst) const noexcept;
   simdjson_really_inline SIMDJSON_WARN_UNUSED simdjson_result<std::string_view> unescape(parser &parser) const noexcept;
+  simdjson_really_inline SIMDJSON_WARN_UNUSED error_code unescape(uint8_t *&dst, std::string_view &s) const noexcept;
+  simdjson_really_inline SIMDJSON_WARN_UNUSED error_code unescape(parser &parser, std::string_view &s) const noexcept;
 private:
   const uint8_t * buf;
   friend class object;

@@ -80,13 +80,13 @@ simdjson_really_inline simdjson_result<value> object::operator[](const std::stri
     if (finished()) { return { doc, NO_SUCH_FIELD }; }
 
     // Go to the next field, skipping anything the user 
-    if ((_err = doc->iter.next_field(container).get(has_next) )) { return { doc, _err }; }
+    if ((_err = doc->iter.next_field(container, has_next) )) { return { doc, _err }; }
   }
 
   while (has_next) {
     // Get the key
     raw_json_string actual_key;
-    if ((_err = doc->iter.field_key().get(actual_key) )) { return { doc, _err }; };
+    if ((_err = doc->iter.field_key(actual_key) )) { return { doc, _err }; };
     if ((_err = doc->iter.field_value() )) { return { doc, _err }; }
 
     // Check if it matches
@@ -96,7 +96,7 @@ simdjson_really_inline simdjson_result<value> object::operator[](const std::stri
     }
     logger::log_event(doc->iter, "no match", key);
     doc->iter.skip(); // Skip the value entirely
-    if ((_err = doc->iter.next_field(container).get(has_next)) ) { return { doc, _err }; }
+    if ((_err = doc->iter.next_field(container, has_next)) ) { return { doc, _err }; }
   }
 
   // If the loop ended, we're out of fields to look at.
@@ -106,7 +106,7 @@ simdjson_really_inline simdjson_result<value> object::operator[](const std::stri
 simdjson_really_inline object object::start(document *doc) noexcept {
   error_code error;
   json_iterator::container c;
-  if ((error = doc->iter.start_object().get(c))) { return error_chain(doc, error); }
+  if ((error = doc->iter.start_object(c))) { return error_chain(doc, error); }
   return object(doc, c);
 }
 simdjson_really_inline object object::started(document *doc) noexcept {
@@ -147,7 +147,8 @@ simdjson_really_inline object &object::operator++() noexcept {
   SIMDJSON_ASSUME(!at_start);
   if (finished()) { return *this; } // Only possible when there was an error and we're about to stop.
   
-  error = doc->iter.next_field(container).error();
+  SIMDJSON_UNUSED bool has_next;
+  error = doc->iter.next_field(container, has_next);
   return *this;
 }
 

@@ -8,19 +8,26 @@ simdjson_really_inline raw_json_string::raw_json_string(const raw_json_string &o
 simdjson_really_inline raw_json_string &raw_json_string::operator=(const raw_json_string &other) noexcept { buf = other.buf; return *this; }
 simdjson_really_inline const char * raw_json_string::raw() const noexcept { return (const char *)buf; }
 simdjson_really_inline SIMDJSON_WARN_UNUSED simdjson_result<std::string_view> raw_json_string::unescape(uint8_t *&dst) const noexcept {
-  uint8_t *end = stage2::stringparsing::parse_string(buf, dst);
-  if (!end) { return STRING_ERROR; }
-  std::string_view result((const char *)dst, end-dst);
-  dst = end;
-  return result;
+  std::string_view s;
+  SIMDJSON_TRY( unescape(dst, s) );
+  return s;
 }
 
 simdjson_really_inline SIMDJSON_WARN_UNUSED simdjson_result<std::string_view> raw_json_string::unescape(parser &parser) const noexcept {
-  uint8_t *end = stage2::stringparsing::parse_string(buf, parser.current_string_buf_loc);
+  std::string_view s;
+  SIMDJSON_TRY( unescape(parser, s) );
+  return s;
+}
+
+simdjson_really_inline SIMDJSON_WARN_UNUSED error_code raw_json_string::unescape(uint8_t *&dst, std::string_view &s) const noexcept {
+  uint8_t *end = stage2::stringparsing::parse_string(buf, dst);
   if (!end) { return STRING_ERROR; }
-  std::string_view result((const char *)parser.current_string_buf_loc, end-parser.current_string_buf_loc);
-  parser.current_string_buf_loc = end;
-  return result;
+  s = std::string_view((const char *)dst, end-dst);
+  dst = end;
+  return SUCCESS;
+}
+simdjson_really_inline SIMDJSON_WARN_UNUSED error_code raw_json_string::unescape(parser &parser, std::string_view &s) const noexcept {
+  return unescape(parser.current_string_buf_loc, s);
 }
 
 SIMDJSON_UNUSED simdjson_really_inline bool operator==(const raw_json_string &a, std::string_view b) noexcept {

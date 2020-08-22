@@ -69,7 +69,7 @@ simdjson_really_inline simdjson_result<double> value::get_double() noexcept {
   log_value("double");
   double result;
   error_code error;
-  if ((error = stage2::numberparsing::parse_double(json).get(result))) { log_error("not a double"); return error; }
+  if ((error = stage2::numberparsing::parse_double(json, result))) { log_error("not a double"); return error; }
   json = nullptr; // Communicate that we have handled the value PERF TODO elided, right?
   return result;
 }
@@ -77,7 +77,7 @@ simdjson_really_inline simdjson_result<uint64_t> value::get_uint64() noexcept {
   log_value("unsigned");
   uint64_t result;
   error_code error;
-  if ((error = stage2::numberparsing::parse_unsigned(json).get(result))) { log_error("not a unsigned integer"); return error; }
+  if ((error = stage2::numberparsing::parse_unsigned(json, result))) { log_error("not a unsigned integer"); return error; }
   json = nullptr; // Communicate that we have handled the value PERF TODO elided, right?
   return result;
 }
@@ -85,7 +85,7 @@ simdjson_really_inline simdjson_result<int64_t> value::get_int64() noexcept {
   log_value("integer");
   int64_t result;
   error_code error;
-  if ((error = stage2::numberparsing::parse_integer(json).get(result))) { log_error("not an integer"); return error; }
+  if ((error = stage2::numberparsing::parse_integer(json, result))) { log_error("not an integer"); return error; }
   json = nullptr; // Communicate that we have handled the value PERF TODO elided, right?
   return result;
 }

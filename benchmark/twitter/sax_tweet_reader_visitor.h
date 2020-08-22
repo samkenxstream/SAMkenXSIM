@@ -246,7 +246,7 @@ simdjson_really_inline void sax_tweet_reader_visitor::end_container(json_iterato
 simdjson_really_inline error_code sax_tweet_reader_visitor::parse_nullable_unsigned(json_iterator &iter, const uint8_t *value, const field &f) {
   iter.log_value(f.key);
   auto i = reinterpret_cast<uint64_t *>(reinterpret_cast<char *>(&tweets.back()) + f.offset);
-  if (auto error = numberparsing::parse_unsigned(value).get(*i)) {
+  if (auto error = numberparsing::parse_unsigned(value, *i)) {
     // If number parsing failed, check if it's null before returning the error
     if (!atomparsing::is_valid_null_atom(value)) { iter.log_error("expected number or null"); return error; }
     i = 0;
@@ -256,7 +256,7 @@ simdjson_really_inline error_code sax_tweet_reader_visitor::parse_nullable_unsig
 simdjson_really_inline error_code sax_tweet_reader_visitor::parse_unsigned(json_iterator &iter, const uint8_t *value, const field &f) {
   iter.log_value(f.key);
   auto i = reinterpret_cast<uint64_t *>(reinterpret_cast<char *>(&tweets.back()) + f.offset);
-  return numberparsing::parse_unsigned(value).get(*i);
+  return numberparsing::parse_unsigned(value, *i);
 }
 simdjson_really_inline error_code sax_tweet_reader_visitor::parse_string(json_iterator &iter, const uint8_t *value, const field &f) {
   iter.log_value(f.key);
