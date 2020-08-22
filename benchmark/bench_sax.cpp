@@ -102,90 +102,98 @@ namespace iter_bench {
 using namespace simdjson;
 using namespace haswell;
 
-#define throw_if_error(EXPR, MESSAGE) { error_code _err = (EXPR); if (_err) { std::cerr << "ERROR: " << MESSAGE << " -- "<< _err << std::endl; throw _err; } }
-#define throw_if(EXPR, MESSAGE) { if (EXPR) { std::cerr << "ERROR: " << MESSAGE << std::endl; throw MESSAGE; } }
+#define throw_if_error(EXPR, MESSAGE) { error_code _err = (EXPR); if (_err) { return _err; } }
+#define throw_if(EXPR, MESSAGE) { if (EXPR) { return TAPE_ERROR; } }
 
-// simdjson_really_inline void get_string_field(std::string_view &result, const char *key, ondemand::json_iterator &iter, ondemand::parser &parser) {
-//   error_code error;
-//   ondemand::raw_json_string s;
-//   if ((error = iter.get_raw_json_string(s) )) { throw error; }
-//   if ((error = s.unescape(parser, result) )) { throw error; }
-//   bool has_field;
-//   if ((error = iter.find_field_raw(key, has_field) )) { throw error; }
-//   if (!has_field) { throw NO_SUCH_FIELD; }
-// }
-simdjson_really_inline void read_tweets(ondemand::parser &parser, padded_string &json, std::vector<twitter::tweet> &tweets) {
+template<bool FIRST=false>
+simdjson_really_inline error_code get_string(std::string_view &result, const char *key, ondemand::json_iterator &iter, ondemand::parser &parser) {
+  bool has_field;
+  if (FIRST) {
+    SIMDJSON_TRY( iter.find_first_field_raw(key, has_field) );
+  } else {
+    SIMDJSON_TRY( iter.find_next_field_raw(key, has_field) );
+  }
+  if (!has_field) { return NO_SUCH_FIELD; }
+  ondemand::raw_json_string s;
+  SIMDJSON_TRY( iter.get_raw_json_string(s) );
+  SIMDJSON_TRY( s.unescape(parser, result) );
+  return SUCCESS;
+}
+template<bool FIRST=false>
+simdjson_really_inline error_code get_uint64(uint64_t &result, const char *key, ondemand::json_iterator &iter) {
+  bool has_field;
+  if (FIRST) {
+    SIMDJSON_TRY( iter.find_first_field_raw(key, has_field) );
+  } else {
+    SIMDJSON_TRY( iter.find_next_field_raw(key, has_field) );
+  }
+  if (!has_field) { return NO_SUCH_FIELD; }
+  SIMDJSON_TRY( iter.get_uint64(result) );
+  return SUCCESS;
+}
+template<bool FIRST=false>
+simdjson_really_inline error_code get_nullable_uint64(uint64_t &result, const char *key, ondemand::json_iterator &iter) {
+  bool has_field;
+  if (FIRST) {
+    SIMDJSON_TRY( iter.find_first_field_raw(key, has_field) );
+  } else {
+    SIMDJSON_TRY( iter.find_next_field_raw(key, has_field) );
+  }
+  if (!has_field) { return NO_SUCH_FIELD; }
+  if (iter.is_null()) { return SUCCESS; }
+  SIMDJSON_TRY( iter.get_uint64(result) );
+  return SUCCESS;
+}
+simdjson_really_inline error_code read_tweets(ondemand::parser &parser, padded_string &json, std::vector<twitter::tweet> &tweets) {
   // Walk the document, parsing the tweets as we go
 
   // { "statuses": 
-  auto doc = parser.parse(json);
+  ondemand::document doc;
+  SIMDJSON_TRY( parser.parse(json).get(doc) );
   ondemand::json_iterator &iter = doc.iterate();
 
   // { "statuses": [
   bool has_next;
-  throw_if_error( iter.find_first_field_raw("statuses", has_next), "statuses field");
-  throw_if( !has_next, "statuses field" );
+  SIMDJSON_TRY( iter.find_first_field_raw("statuses", has_next) );
+  if (!has_next) { return NO_SUCH_FIELD; }
 
-  throw_if_error( iter.start_array(), "statuses array" );
-  throw_if( iter.is_empty_array(), "empty statuses array" );
+  SIMDJSON_TRY( iter.start_array() );
+  if (iter.is_empty_array()) { return NO_SUCH_FIELD; }
 
   do {
     twitter::tweet tweet;
 
-    throw_if_error( iter.find_first_field_raw("created_at", has_next), "created_at field");
-    throw_if( !has_next, "created_at field");
-    ondemand::raw_json_string s;
-    throw_if_error( iter.get_raw_json_string(s), "created_at field");
-    throw_if( s.unescape(parser, tweet.created_at), "created_at field");
+    SIMDJSON_TRY( get_string<true>(tweet.created_at, "created_at", iter, parser) );
+    SIMDJSON_TRY( get_uint64(tweet.id, "id", iter) );
+    SIMDJSON_TRY( get_string(tweet.text, "text", iter, parser) );
+    SIMDJSON_TRY( get_nullable_uint64(tweet.in_reply_to_status_id, "in_reply_to_status_id", iter) );
 
-    throw_if_error( iter.find_next_field_raw("id", has_next), "id field");
-    throw_if( !has_next, "id field");
-    throw_if_error( iter.get_uint64(tweet.id), "id field");
-
-    throw_if_error( iter.find_next_field_raw("text", has_next), "text field");
-    throw_if( !has_next, "text field");
-    throw_if_error( iter.get_raw_json_string(s), "text field");
-    throw_if( s.unescape(parser, tweet.text), "text field");
-
-    throw_if_error( iter.find_next_field_raw("in_reply_to_status_id", has_next), "in_reply_to_status_id field");
-    throw_if( !has_next, "in_reply_to_status_id field");
-    if (!iter.is_null()) {
-      throw_if_error( iter.get_uint64(tweet.in_reply_to_status_id), "in_reply_to_status_id field");
-    }
-
-    throw_if_error( iter.find_next_field_raw("user", has_next), "user field");
-    throw_if( !has_next, "user field");
+    SIMDJSON_TRY( iter.find_next_field_raw("user", has_next) );
+    if ( !has_next ) { return NO_SUCH_FIELD; }
     {
-      throw_if_error( iter.find_first_field_raw("id", has_next), "user.id field");
-      throw_if( !has_next, "user.id field");
-      throw_if_error( iter.get_uint64(tweet.user.id), "user.id field");
-
-      throw_if_error( iter.find_next_field_raw("screen_name", has_next), "user.screen_name field");
-      throw_if( !has_next, "user.screen_name field");
-      throw_if_error( iter.get_raw_json_string(s), "user.screen_name field");
-      throw_if( s.unescape(parser, tweet.user.screen_name), "user.screen_name field");
-
-      throw_if_error( iter.finish_object(), "finishing user object" );
+      SIMDJSON_TRY( get_uint64<true>(tweet.user.id, "id", iter) );
+      SIMDJSON_TRY( get_string(tweet.user.screen_name, "screen_name", iter, parser) );
     }
-    throw_if_error( iter.find_next_field_raw("retweet_count", has_next), "retweet_count field");
-    throw_if( !has_next, "retweet_count field");
-    throw_if_error( iter.get_uint64(tweet.retweet_count), "Not an int");
+    SIMDJSON_TRY( iter.finish_object() );
 
-    throw_if_error( iter.find_next_field_raw("favorite_count", has_next), "favorite_count field");
-    throw_if( !has_next, "favorite_count field");
-    throw_if_error( iter.get_uint64(tweet.favorite_count), "not an int");
+    SIMDJSON_TRY( get_uint64(tweet.retweet_count, "retweet_count", iter) );
+    SIMDJSON_TRY( get_uint64(tweet.favorite_count, "favorite_count", iter) );
 
     tweets.push_back(tweet);
 
-    throw_if_error( iter.finish_object(), "finishing tweet object" );
-    throw_if_error( iter.has_next_element(has_next), "statuses array" );
+    SIMDJSON_TRY( iter.finish_object() );
+
+
+    SIMDJSON_TRY( iter.has_next_element(has_next) );
   } while (has_next);
+  return SUCCESS;
 }
 
 static void iter_tweets(State &state) {
   // Load twitter.json to a buffer
+  error_code error;
   padded_string json;
-  if (auto error = padded_string::load(TWITTER_JSON).get(json)) { cerr << error << endl; return; }
+  if ((error = padded_string::load(TWITTER_JSON).get(json))) { cerr << error << endl; return; }
 
   // Allocate and warm the vector
   std::vector<twitter::tweet> tweets;
@@ -197,7 +205,7 @@ static void iter_tweets(State &state) {
   size_t tweet_count = 0;
   for (SIMDJSON_UNUSED auto _ : state) {
     tweets.clear();
-    read_tweets(parser, json, tweets);
+    if ((error = read_tweets(parser, json, tweets))) { std::cerr << error << std::endl; return; }
     byte_count += json.size();
     tweet_count += tweets.size();
   }
@@ -458,18 +466,47 @@ BENCHMARK(ondemand_largerandom)->ComputeStatistics("max", [](const std::vector<d
 
 SIMDJSON_TARGET_HASWELL
 
-static simdjson_really_inline double first_double(haswell::ondemand::json_iterator &iter) {
-  SIMDJSON_UNUSED haswell::ondemand::json_iterator::container c;
+static simdjson_really_inline error_code first_double(double &d, haswell::ondemand::json_iterator &iter) {
+  SIMDJSON_TRY( iter.start_object() );
   SIMDJSON_UNUSED haswell::ondemand::raw_json_string key;
-  if (iter.start_object(c) || iter.field_key(key) || iter.field_value()) { throw "Invalid field"; }
-  return iter.get_double();
+  SIMDJSON_TRY( iter.field_key(key) );
+  SIMDJSON_TRY( iter.field_value() );
+  return iter.get_double(d);
 }
 
-static simdjson_really_inline double next_double(haswell::ondemand::json_iterator &iter) {
-  SIMDJSON_UNUSED haswell::ondemand::raw_json_string key;
+static simdjson_really_inline error_code next_double(double &d, haswell::ondemand::json_iterator &iter) {
   bool has_next;
-  if (iter.has_next_field(has_next) || !has_next || iter.field_key(key) || iter.field_value()) { throw "Invalid field"; }
-  return iter.get_double();
+  SIMDJSON_TRY( iter.has_next_field(has_next) );
+  if (!has_next) { return NO_SUCH_FIELD; }
+  SIMDJSON_UNUSED haswell::ondemand::raw_json_string key;
+  SIMDJSON_TRY( iter.field_key(key) );
+  SIMDJSON_TRY( iter.field_value() );
+  return iter.get_double(d);
+}
+
+static simdjson_really_inline error_code iter_largerandom(
+  haswell::ondemand::parser &parser,
+  const padded_string &json,
+  std::vector<my_point> &container
+) {
+  haswell::ondemand::document doc;
+  SIMDJSON_TRY( parser.parse(json).get(doc) );
+  haswell::ondemand::json_iterator &iter = doc.iterate();
+  SIMDJSON_TRY( iter.start_array() );
+  if (iter.is_empty_array()) { return EMPTY; }
+  bool has_next;
+  do {
+    my_point p;
+    SIMDJSON_TRY( first_double(p.x, iter) );
+    SIMDJSON_TRY( next_double(p.y, iter) );
+    SIMDJSON_TRY( next_double(p.z, iter) );
+    container.emplace_back(p);
+
+    SIMDJSON_TRY( iter.has_next_field(has_next) );
+    if (has_next) { throw "Too many fields"; }
+    SIMDJSON_TRY( iter.has_next_element(has_next) );
+  } while (has_next);
+  return SUCCESS;
 }
 
 /*** 
@@ -490,17 +527,7 @@ static void iter_largerandom(State &state) {
   size_t points = 0;
   for (SIMDJSON_UNUSED auto _ : state) {
     std::vector<my_point> container;
-    auto doc = parser.parse(json);
-    ondemand::json_iterator &iter = doc.iterate();
-    ondemand::json_iterator::container c;
-    if (iter.start_array(c)) { throw "not an array"; }
-    if (!iter.is_empty_array()) {
-      bool has_next;
-      do {
-        container.emplace_back(my_point{first_double(iter), next_double(iter), next_double(iter)});
-        if (iter.has_next_field(has_next) || !has_next) { throw "Too many fields"; }
-      } while (!iter.has_next_element(has_next) && has_next);
-    }
+    if ((error = iter_largerandom(parser, json, container))) { throw error; }
     bytes += json.size();
     points += container.size();
     benchmark::DoNotOptimize(container.data());
