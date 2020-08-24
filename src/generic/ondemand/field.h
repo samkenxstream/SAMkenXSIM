@@ -16,11 +16,11 @@ public:
   simdjson_really_inline field &operator=(const field &other) noexcept = delete;
 
   simdjson_really_inline raw_json_string key() const noexcept;
-  simdjson_really_inline ondemand::value &value() noexcept;
+  simdjson_really_inline ondemand::value value() noexcept;
 protected:
   simdjson_really_inline field(raw_json_string key, ondemand::value &&value) noexcept;
-  static simdjson_really_inline simdjson_result<field> start(document *doc) noexcept;
-  static simdjson_really_inline simdjson_result<field> start(document *doc, raw_json_string key) noexcept;
+  static simdjson_really_inline simdjson_result<field> start(json_iterator &parent_iter) noexcept;
+  static simdjson_really_inline simdjson_result<field> start(json_iterator &parent_iter, raw_json_string key) noexcept;
   friend struct simdjson_result<field>;
   friend class object;
 };

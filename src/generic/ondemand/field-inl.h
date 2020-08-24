@@ -12,23 +12,23 @@ simdjson_really_inline field::field(raw_json_string key, ondemand::value &&value
 {
 }
 
-simdjson_really_inline simdjson_result<field> field::start(document *doc) noexcept {
+simdjson_really_inline simdjson_result<field> field::start(json_iterator &parent_iter) noexcept {
   raw_json_string key;
-  SIMDJSON_TRY( doc->iter.field_key().get(key) );
-  SIMDJSON_TRY( doc->iter.field_value() );
-  return field::start(doc, key);
+  SIMDJSON_TRY( parent_iter.field_key().get(key) );
+  SIMDJSON_TRY( parent_iter.field_value() );
+  return field::start(parent_iter, key);
 }
 
-simdjson_really_inline simdjson_result<field> field::start(document *doc, raw_json_string key) noexcept {
-    return field(key, value::start(doc));
+simdjson_really_inline simdjson_result<field> field::start(json_iterator &parent_iter, raw_json_string key) noexcept {
+    return field(key, value::start(parent_iter));
 }
 
 simdjson_really_inline raw_json_string field::key() const noexcept {
   return first;
 }
 
-simdjson_really_inline value &field::value() noexcept {
-  return second;
+simdjson_really_inline value field::value() noexcept {
+  return std::move(second);
 }
 
 } // namespace ondemand
@@ -57,7 +57,7 @@ simdjson_really_inline simdjson_result<SIMDJSON_IMPLEMENTATION::ondemand::raw_js
   return first.key();
 }
 simdjson_really_inline simdjson_result<SIMDJSON_IMPLEMENTATION::ondemand::value> simdjson_result<SIMDJSON_IMPLEMENTATION::ondemand::field>::value() noexcept {
-  return { std::move(first.value()), error() };
+  return { first.value(), error() };
 }
 
 } // namespace simdjson

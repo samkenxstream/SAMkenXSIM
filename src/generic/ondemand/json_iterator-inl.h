@@ -5,9 +5,19 @@ namespace ondemand {
 simdjson_really_inline json_iterator::json_iterator() noexcept = default;
 simdjson_really_inline json_iterator::json_iterator(json_iterator &&other) noexcept = default;
 simdjson_really_inline json_iterator &json_iterator::operator=(json_iterator &&other) noexcept = default;
-simdjson_really_inline json_iterator::json_iterator(const uint8_t *_buf, uint32_t *_index) noexcept
-  : token_iterator(_buf, _index)
+simdjson_really_inline json_iterator::json_iterator(ondemand::parser *_parser) noexcept
+  : token_iterator(_parser->dom_parser.buf, _parser->dom_parser.structural_indexes.get()), parser{_parser}
 {
+  logger::log_headers();
+  parser->current_string_buf_loc = parser->string_buf.get();
+}
+
+simdjson_really_inline json_iterator::~json_iterator() noexcept {
+  // Release the string buf so it can be reused by the next document
+  if (active()) {
+    logger::log_end_value(*this, "document");
+    parser->current_string_buf_loc = nullptr;
+  }
 }
 
 
@@ -231,6 +241,29 @@ simdjson_really_inline bool json_iterator::skip_container() noexcept {
     }
   };
 }
+
+//
+// json_iterator_lease
+//
+simdjson_really_inline json_iterator_lease::json_iterator_lease() noexcept = default;
+simdjson_really_inline json_iterator_lease::json_iterator_lease(json_iterator &_previous_iter) noexcept
+  : json_iterator{std::move(_previous_iter)},
+    previous_iter{&_previous_iter}
+{
+}
+
+simdjson_really_inline json_iterator_lease::json_iterator_lease(json_iterator_lease &&other) noexcept = default;
+simdjson_really_inline json_iterator_lease &json_iterator_lease::operator=(json_iterator_lease &&other) noexcept = default;
+simdjson_really_inline json_iterator_lease::~json_iterator_lease() noexcept {
+  assert(!active());
+}
+
+simdjson_really_inline json_iterator &json_iterator_lease::release() noexcept {
+  *previous_iter = std::move(*this);
+  abandon();
+  return *previous_iter;
+}
+
 
 } // namespace ondemand
 } // namespace SIMDJSON_IMPLEMENTATION

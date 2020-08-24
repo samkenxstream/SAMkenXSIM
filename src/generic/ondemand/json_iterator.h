@@ -14,6 +14,7 @@ public:
   simdjson_really_inline json_iterator &operator=(json_iterator &&other) noexcept;
   simdjson_really_inline json_iterator(const json_iterator &other) noexcept = delete;
   simdjson_really_inline json_iterator &operator=(const json_iterator &other) noexcept = delete;
+  simdjson_really_inline ~json_iterator() noexcept;
 
   /**
    * Check for an opening { and start an object iteration.
@@ -118,15 +119,37 @@ public:
   simdjson_really_inline bool skip_container() noexcept;
 
 protected:
-  simdjson_really_inline json_iterator(const uint8_t *buf, uint32_t *index) noexcept;
+  simdjson_really_inline json_iterator(ondemand::parser *parser) noexcept;
   template<int N>
   SIMDJSON_WARN_UNUSED simdjson_really_inline bool advance_to_buffer(uint8_t (&buf)[N]) noexcept;
+  ondemand::parser *parser{};
 
   friend class document;
   friend class object;
   friend class array;
   friend class value;
   friend simdjson_really_inline void logger::log_line(const json_iterator &iter, const char *title_prefix, const char *title, std::string_view detail, int delta, int depth_delta) noexcept;
+};
+
+/**
+ * Represents temporary ownership of a JSON iterator, which can be handed off to a child or released
+ * to a parent.
+ */
+class json_iterator_lease : public json_iterator {
+public:
+  simdjson_really_inline json_iterator_lease() noexcept;
+  simdjson_really_inline json_iterator_lease(json_iterator &previous_iter) noexcept;
+  simdjson_really_inline json_iterator_lease(json_iterator_lease &&previous_iter) noexcept;
+  simdjson_really_inline json_iterator_lease &operator=(json_iterator_lease &&previous_iter) noexcept;
+  json_iterator_lease(const json_iterator_lease &) = delete;
+  json_iterator_lease &operator=(const json_iterator_lease &) = delete;
+
+  simdjson_really_inline ~json_iterator_lease() noexcept;
+
+  simdjson_really_inline json_iterator &release() noexcept;
+
+protected:
+  json_iterator *previous_iter{};
 };
 
 } // namespace ondemand

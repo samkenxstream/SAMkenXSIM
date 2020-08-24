@@ -31,7 +31,7 @@ private:
   uint8_t *current_string_buf_loc{};
 
   friend class raw_json_string;
-  friend class document;
+  friend class json_iterator;
   friend class value;
 };
 

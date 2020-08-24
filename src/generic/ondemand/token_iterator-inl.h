@@ -3,11 +3,27 @@ namespace SIMDJSON_IMPLEMENTATION {
 namespace ondemand {
 
 simdjson_really_inline token_iterator::token_iterator() noexcept = default;
-simdjson_really_inline token_iterator::token_iterator(token_iterator &&other) noexcept = default;
-simdjson_really_inline token_iterator &token_iterator::operator=(token_iterator &&other) noexcept = default;
 simdjson_really_inline token_iterator::token_iterator(const uint8_t *_buf, uint32_t *_index) noexcept
   : buf{_buf}, index{_index}
 {
+}
+simdjson_really_inline token_iterator::token_iterator(token_iterator &&other) noexcept
+  : buf{other.buf}, index{other.index}
+{
+  other.abandon();
+}
+simdjson_really_inline token_iterator &token_iterator::operator=(token_iterator &&other) noexcept {
+  buf = other.buf;
+  index = other.index;
+  other.abandon();
+  return *this;
+}
+simdjson_really_inline void token_iterator::abandon() noexcept {
+  assert(active());
+  index = nullptr;
+}
+simdjson_really_inline bool token_iterator::active() const noexcept {
+  return index;
 }
 
 simdjson_really_inline const uint8_t *token_iterator::peek(int32_t delta) const noexcept {

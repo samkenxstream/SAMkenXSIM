@@ -53,43 +53,27 @@ protected:
    * @param doc The document containing the array.
    * @error INCORRECT_TYPE if the iterator is not at [.
    */
-  static simdjson_really_inline simdjson_result<array> start(document *doc) noexcept;
+  static simdjson_really_inline simdjson_result<array> start(json_iterator &parent_iter) noexcept;
   /**
    * Begin array iteration.
    *
    * @param doc The document containing the array. The iterator must be just after the opening `[`.
    */
-  static simdjson_really_inline array started(document *doc) noexcept;
+  static simdjson_really_inline array started(json_iterator &parent_iter) noexcept;
 
   /**
-   * Report the current error and set finished so it won't be reported again.
+   * Array creation for non-empty objects.
    */
-  simdjson_really_inline error_code report_error() noexcept;
+  simdjson_really_inline array(json_iterator &iter) noexcept;
+
+  simdjson_really_inline error_code yield_error() noexcept;
+
+  simdjson_really_inline error_code check_has_next() noexcept;
 
   /**
-   * Internal array creation. Call array::start() or array::started() instead of this.
-   *
-   * @param doc The document containing the array. doc->iter.depth must already be incremented to
-   *            reflect the array's depth. The iterator must be just after the opening `[`.
-   * @param has_value Whether the array has a value (false means empty array).
+   * Iterator we're going to move through.
    */
-  simdjson_really_inline array(document *_doc, bool has_value) noexcept;
-
-  /**
-   * Document containing this array.
-   *
-   * PERF NOTE: expected to be elided in favor of the parent document: this is set when the array
-   * is first used, and never changes afterwards.
-   */
-  document *doc{};
-  /**
-   * Whether we have anything to yield.
-   *
-   * PERF NOTE: we hope this will be elided into inline control flow, as it is true for all
-   * iterations except the last, and compilers with SSA optimization can sometimes do last-iteration
-   * optimization.
-   */
-  bool has_next{};
+  json_iterator_lease iter{};
   /**
    * Error, if there is one. Errors are only yielded once.
    *

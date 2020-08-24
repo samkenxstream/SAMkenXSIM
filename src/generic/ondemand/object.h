@@ -51,36 +51,22 @@ protected:
    * @param doc The document containing the object. The iterator must be just after the opening `{`.
    * @param error If this is not SUCCESS, creates an error chained object.
    */
-  static simdjson_really_inline simdjson_result<object> start(document *doc) noexcept;
-  static simdjson_really_inline object started(document *doc) noexcept;
+  static simdjson_really_inline simdjson_result<object> start(json_iterator &parent_iter) noexcept;
+  static simdjson_really_inline object started(json_iterator &parent_iter) noexcept;
 
   /**
-   * Internal object creation. Call object::begin(doc) instead of this.
-   *
-   * @param doc The document containing the object. doc->depth must already be incremented to
-   *            reflect the object's depth. The iterator must be just after the opening `{`.
-   * @param is_empty Whether this container is empty or not.
-   * @param error The error to report. If the error is not SUCCESS, this is an error chained object.
+   * Object creation for non-empty objects.
    */
-  simdjson_really_inline object(document *_doc, bool is_empty) noexcept;
+  simdjson_really_inline object(json_iterator &parent_iter) noexcept;
 
-  simdjson_really_inline error_code report_error() noexcept;
+  simdjson_really_inline error_code yield_error() noexcept;
+
+  simdjson_really_inline error_code check_has_next() noexcept;
 
   /**
-   * Document containing the primary iterator.
-   *
-   * PERF NOTE: expected to be elided in favor of the parent document: this is set when the object
-   * is first used, and never changes afterwards.
+   * Iterator we're going to move through.
    */
-  document *doc{};
-  /**
-   * Whether we have anything to yield.
-   *
-   * PERF NOTE: we hope this will be elided into inline control flow, as it is true for all
-   * iterations except the last, and compilers with SSA optimization can sometimes do last-iteration
-   * optimization.
-   */
-  bool has_next{};
+  json_iterator_lease iter{};
   /**
    * Whether we are at the start.
    * 

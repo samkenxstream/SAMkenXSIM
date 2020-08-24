@@ -54,6 +54,9 @@ public:
   simdjson_really_inline bool operator<(const token_iterator &other) const noexcept;
   simdjson_really_inline bool operator<=(const token_iterator &other) const noexcept;
 
+  simdjson_really_inline void abandon() noexcept;
+  simdjson_really_inline bool active() const noexcept;
+
 protected:
   simdjson_really_inline token_iterator(const uint8_t *buf, uint32_t *index) noexcept;
 

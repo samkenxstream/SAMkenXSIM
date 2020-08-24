@@ -112,7 +112,7 @@ simdjson_really_inline void read_tweets(ondemand::parser &parser, padded_string 
 
   // { "statuses": 
   auto doc = parser.parse(json);
-  ondemand::json_iterator &iter = doc.iterate();
+  ondemand::json_iterator iter = doc.iterate();
   if (!iter.start_object()   || !iter.find_field_raw("statuses")) { throw; }
   // { "statuses": [
   if (!iter.start_array()) { throw; }
@@ -466,7 +466,7 @@ static void iter_largerandom(State &state) {
   for (SIMDJSON_UNUSED auto _ : state) {
     std::vector<my_point> container;
     auto doc = parser.parse(json);
-    ondemand::json_iterator &iter = doc.iterate();
+    ondemand::json_iterator iter = doc.iterate();
     if (iter.start_array()) {
       do {
         container.emplace_back(my_point{first_double(iter), next_double(iter), next_double(iter)});

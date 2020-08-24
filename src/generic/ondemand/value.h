@@ -26,6 +26,10 @@ public:
   // Uses RAII to ensure we skip the value if it is unused.
   // TODO assert if two values are ever alive at the same time, to ensure they get destroyed
   simdjson_really_inline ~value() noexcept;
+
+  /**
+   * Skip this value.
+   */
   simdjson_really_inline void skip() noexcept;
   simdjson_really_inline simdjson_result<array> get_array() noexcept;
   simdjson_really_inline simdjson_result<object> get_object() noexcept;
@@ -59,7 +63,7 @@ protected:
    *
    * Use value::read() instead of this.
    */
-  simdjson_really_inline value(document *doc, const uint8_t *json) noexcept;
+  simdjson_really_inline value(json_iterator &parent, const uint8_t *json) noexcept;
 
   /**
    * Read a value.
@@ -68,13 +72,13 @@ protected:
    *
    * @param doc The document containing the value. Iterator must be at the value start position.
    */
-  static simdjson_really_inline value start(document *doc) noexcept;
+  static simdjson_really_inline value start(json_iterator &parent) noexcept;
 
   simdjson_really_inline void log_value(const char *type) const noexcept;
   simdjson_really_inline void log_error(const char *message) const noexcept;
 
-  document *doc{}; // For the string buffer (if we need it)
   const uint8_t *json{}; // The JSON text of the value
+  json_iterator_lease iter{};
 
   friend class document;
   friend class array;

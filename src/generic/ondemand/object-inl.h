@@ -5,31 +5,31 @@ namespace ondemand {
 //
 // ### Live States
 //
-// While iterating or looking up values, depth >= doc->iter.depth. at_start may vary. Error is
+// While iterating or looking up values, depth >= iter.depth. at_start may vary. Error is
 // always SUCCESS:
 //
 // - Start: This is the state when the object is first found and the iterator is just past the {.
 //   In this state, at_start == true.
 // - Next: After we hand a scalar value to the user, or an array/object which they then fully
 //   iterate over, the iterator is at the , or } before the next value. In this state,
-//   depth == doc->iter.depth, at_start == false, and error == SUCCESS.
+//   depth == iter.depth, at_start == false, and error == SUCCESS.
 // - Unfinished Business: When we hand an array/object to the user which they do not fully
 //   iterate over, we need to finish that iteration by skipping child values until we reach the
-//   Next state. In this state, depth > doc->iter.depth, at_start == false, and error == SUCCESS.
+//   Next state. In this state, depth > iter.depth, at_start == false, and error == SUCCESS.
 //
 // ## Error States
 // 
-// In error states, we will yield exactly one more value before stopping. doc->iter.depth == depth
+// In error states, we will yield exactly one more value before stopping. iter.depth == depth
 // and at_start is always false. We decrement after yielding the error, moving to the Finished
 // state.
 //
 // - Chained Error: When the object iterator is part of an error chain--for example, in
 //   `for (auto tweet : doc["tweets"])`, where the tweet field may be missing or not be an
 //   object--we yield that error in the loop, exactly once. In this state, error != SUCCESS and
-//   doc->iter.depth == depth, and at_start == false. We decrement depth when we yield the error.
+//   iter.depth == depth, and at_start == false. We decrement depth when we yield the error.
 // - Missing Comma Error: When the iterator ++ method discovers there is no comma between fields,
 //   we flag that as an error and treat it exactly the same as a Chained Error. In this state,
-//   error == TAPE_ERROR, doc->iter.depth == depth, and at_start == false.
+//   error == TAPE_ERROR, iter.depth == depth, and at_start == false.
 //
 // Errors that occur while reading a field to give to the user (such as when the key is not a
 // string or the field is missing a colon) are yielded immediately. Depth is then decremented,
@@ -37,78 +37,79 @@ namespace ondemand {
 //
 // ## Terminal State
 //
-// The terminal state has doc->iter.depth < depth. at_start is always false.
+// The terminal state has iter.depth < depth. at_start is always false.
 //
 // - Finished: When we have reached a }, we are finished. We signal this by decrementing depth.
-//   In this state, doc->iter.depth < depth, at_start == false, and error == SUCCESS.
+//   In this state, iter.depth < depth, at_start == false, and error == SUCCESS.
 //
 
 simdjson_really_inline object::object() noexcept = default;
-simdjson_really_inline object::object(document *_doc, bool _has_value) noexcept
-  : doc{_doc}, has_next{_has_value}, at_start{true}, error{SUCCESS}
+simdjson_really_inline object::object(json_iterator &_parent_iter) noexcept
+  : iter{_parent_iter}, at_start{true}, error{SUCCESS}
 {
 }
-simdjson_really_inline object::object(object &&other) noexcept
-  : doc{other.doc}, has_next{other.has_next}, at_start{other.at_start}, error{other.error}
-{
-  // Terminate the other iterator
-  other.has_next = false;
-}
-simdjson_really_inline object &object::operator=(object &&other) noexcept {
-  doc = other.doc;
-  has_next = other.has_next;
-  at_start = other.at_start;
-  error = other.error;
-  // Terminate the other iterator
-  other.has_next = false;
-  return *this;
-}
+simdjson_really_inline object::object(object &&other) noexcept = default;
+simdjson_really_inline object &object::operator=(object &&other) noexcept = default;
 
 simdjson_really_inline object::~object() noexcept {
-  if (!error && has_next) {
-    logger::log_event(doc->iter, "unfinished", "object");
-    doc->iter.skip_container();
+  if (iter.active()) {
+    logger::log_event(iter, "unfinished object");
+    iter.skip_container();
+    iter.release();
   }
+}
+
+simdjson_really_inline error_code object::check_has_next() noexcept {
+  bool has_next;
+  SIMDJSON_TRY( iter.has_next_field().get(has_next) );
+  // If it's empty, we're done with the iterator; give it back to the parent.
+  if (!has_next) {
+    iter.release();
+  }
+  return SUCCESS;
 }
 
 simdjson_really_inline simdjson_result<value> object::operator[](const std::string_view key) noexcept {
-  if (error) { return report_error(); }
+  if (error) { return yield_error(); }
 
   // Unless this is the first field, we need to advance past the , and check for }
-  if (has_next) {
-    if (at_start) {
-      at_start = false;
-    } else {
-      if ((error = doc->iter.has_next_field().get(has_next) )) { return report_error(); }
-    }
+  if (at_start) {
+    at_start = false;
+  } else {
+    if (!iter.active()) { return NO_SUCH_FIELD; }
+    if ((error = check_has_next() )) { return yield_error(); };
   }
-  while (has_next) {
+  while (iter.active()) {
     // Get the key
     raw_json_string actual_key;
-    if ((error = doc->iter.field_key().get(actual_key) )) { return report_error(); };
-    if ((error = doc->iter.field_value() )) { return report_error(); }
+    if ((error = iter.field_key().get(actual_key) )) { return yield_error(); };
+    if ((error = iter.field_value() )) { return yield_error(); }
 
     // Check if it matches
     if (actual_key == key) {
-      logger::log_event(doc->iter, "match", key, -2);
-      return value::start(doc);
+      logger::log_event(iter, "match", key, -2);
+      return value::start(iter);
     }
-    logger::log_event(doc->iter, "no match", key, -2);
-    doc->iter.skip(); // Skip the value entirely
-    if ((error = doc->iter.has_next_field().get(has_next) )) { return report_error(); }
+    logger::log_event(iter, "no match", key, -2);
+    iter.skip(); // Skip the value entirely
+    if ((error = check_has_next() )) { return yield_error(); };
   }
 
   // If the loop ended, we're out of fields to look at.
   return NO_SUCH_FIELD;
 }
 
-simdjson_really_inline simdjson_result<object> object::start(document *doc) noexcept {
+simdjson_really_inline simdjson_result<object> object::start(json_iterator &parent_iter) noexcept {
   bool has_value;
-  SIMDJSON_TRY( doc->iter.start_object().get(has_value) );
-  return object(doc, has_value);
+  SIMDJSON_TRY( parent_iter.start_object().get(has_value) );
+  return started(parent_iter);
 }
-simdjson_really_inline object object::started(document *doc) noexcept {
-  return object(doc, doc->iter.started_object());
+simdjson_really_inline object object::started(json_iterator &parent_iter) noexcept {
+  if (parent_iter.started_object()) {
+    return object(parent_iter);
+  } else {
+    return object();
+  }
 }
 simdjson_really_inline object::iterator object::begin() noexcept {
   return *this;
@@ -117,9 +118,12 @@ simdjson_really_inline object::iterator object::end() noexcept {
   return *this;
 }
 
-simdjson_really_inline error_code object::report_error() noexcept {
-  has_next = false;
-  return error;
+simdjson_really_inline error_code object::yield_error() noexcept {
+  error_code result = error;
+  error = SUCCESS;
+  // Abandon the iterator without giving it back: no one else shall iterate this, either!
+  iter.abandon();
+  return result;
 }
 
 //
@@ -133,19 +137,19 @@ simdjson_really_inline object::iterator::iterator(const object::iterator &_o) no
 simdjson_really_inline object::iterator &object::iterator::operator=(const object::iterator &_o) noexcept = default;
 
 simdjson_really_inline simdjson_result<field> object::iterator::operator*() noexcept {
-  if (o->error) { return o->report_error(); }
+  if (o->error) { return o->yield_error(); }
   if (o->at_start) { o->at_start = false; }
-  return field::start(o->doc);
+  return field::start(o->iter);
 }
-simdjson_really_inline bool object::iterator::operator==(const object::iterator &) noexcept {
-  return !o->has_next;
+simdjson_really_inline bool object::iterator::operator==(const object::iterator &other) noexcept {
+  return !(*this != other);
 }
 simdjson_really_inline bool object::iterator::operator!=(const object::iterator &) noexcept {
-  return o->has_next;
+  return o->error || o->iter.active();
 }
 simdjson_really_inline object::iterator &object::iterator::operator++() noexcept {
   if (o->error) { return *this; }
-  o->error = o->doc->iter.has_next_element().get(o->has_next); // If there's an error, has_next stays true.
+  o->error = o->check_has_next();
   return *this;
 }
 
@@ -212,12 +216,12 @@ simdjson_really_inline simdjson_result<SIMDJSON_IMPLEMENTATION::ondemand::field>
   if (error()) { return error(); }
   return *first;
 }
-// Assumes it's being compared with the end. true if depth < doc->iter.depth.
+// Assumes it's being compared with the end. true if depth < iter.depth.
 simdjson_really_inline bool simdjson_result<SIMDJSON_IMPLEMENTATION::ondemand::object::iterator>::operator==(const simdjson_result<SIMDJSON_IMPLEMENTATION::ondemand::object::iterator> &other) noexcept {
   if (error()) { return true; }
   return first == other.first;
 }
-// Assumes it's being compared with the end. true if depth >= doc->iter.depth.
+// Assumes it's being compared with the end. true if depth >= iter.depth.
 simdjson_really_inline bool simdjson_result<SIMDJSON_IMPLEMENTATION::ondemand::object::iterator>::operator!=(const simdjson_result<SIMDJSON_IMPLEMENTATION::ondemand::object::iterator> &other) noexcept {
   if (error()) { return false; }
   return first != other.first;
