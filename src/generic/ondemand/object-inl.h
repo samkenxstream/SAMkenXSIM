@@ -121,7 +121,7 @@ simdjson_really_inline error_code object::yield_error() noexcept {
   error_code result = error;
   error = SUCCESS;
   // Abandon the iterator without giving it back: no one else shall iterate this, either!
-  iter->abandon();
+  iter.abandon();
   return result;
 }
 

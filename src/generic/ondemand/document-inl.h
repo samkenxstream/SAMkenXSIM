@@ -13,9 +13,7 @@ simdjson_really_inline document::document(json_iterator &&_iter) noexcept
 }
 
 simdjson_really_inline document::~document() noexcept {
-  if (iter.is_alive()) {
-    logger::log_end_value(iter, "document");
-  }
+  logger::log_end_value(iter, "document");
 }
 
 simdjson_really_inline value document::as_value() noexcept {

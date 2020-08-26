@@ -134,6 +134,8 @@ protected:
 
   /** The parser with buffers we're iterating over */
   ondemand::parser *parser{};
+  /** Current string buffer location */
+  uint8_t *current_string_buf_loc{};
   /** The number of open containers / values referring to this iterator. */
   uint32_t active_lease_depth{};
 
@@ -142,7 +144,7 @@ protected:
   SIMDJSON_WARN_UNUSED simdjson_really_inline bool advance_to_buffer(uint8_t (&buf)[N]) noexcept;
 
   friend class json_iterator_ref;
-  friend class value; // for parser->current_string_buf_loc
+  friend class raw_json_string; // for current_string_buf_loc
   friend class parser; // for parser constructor
   friend simdjson_really_inline void logger::log_line(const json_iterator &iter, const char *title_prefix, const char *title, std::string_view detail, int delta, int depth_delta) noexcept;
 };

@@ -7,24 +7,8 @@ simdjson_really_inline token_iterator::token_iterator(const uint8_t *_buf, uint3
   : buf{_buf}, index{_index}
 {
 }
-simdjson_really_inline token_iterator::token_iterator(token_iterator &&other) noexcept
-  : buf{other.buf}, index{other.index}
-{
-  other.abandon();
-}
-simdjson_really_inline token_iterator &token_iterator::operator=(token_iterator &&other) noexcept {
-  buf = other.buf;
-  index = other.index;
-  other.abandon();
-  return *this;
-}
-simdjson_really_inline void token_iterator::abandon() noexcept {
-  SIMDJSON_ASSUME(is_alive());
-  index = nullptr;
-}
-simdjson_really_inline bool token_iterator::is_alive() const noexcept {
-  return index;
-}
+simdjson_really_inline token_iterator::token_iterator(token_iterator &&other) noexcept = default;
+simdjson_really_inline token_iterator &token_iterator::operator=(token_iterator &&other) noexcept = default;
 
 simdjson_really_inline const uint8_t *token_iterator::peek(int32_t delta) const noexcept {
   return &buf[*(index+delta)];

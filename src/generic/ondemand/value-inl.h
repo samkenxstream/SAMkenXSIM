@@ -18,6 +18,7 @@ simdjson_really_inline value::~value() noexcept {
 }
 
 simdjson_really_inline void value::skip() noexcept {
+  SIMDJSON_ASSUME(iter.is_active());
   switch (*json) {
     case '[': case '{':
       logger::log_start_value(*iter, "unused");
@@ -50,13 +51,17 @@ simdjson_really_inline simdjson_result<raw_json_string> value::get_raw_json_stri
   SIMDJSON_ASSUME(iter.is_active());
   log_value("string");
   if (*json != '"') { log_error("not a string"); return INCORRECT_TYPE; }
-  return raw_json_string{&json[1]};
+  raw_json_string result{&json[1]};
+  iter.release();
+  return result;
 }
 simdjson_really_inline simdjson_result<std::string_view> value::get_string() noexcept {
   SIMDJSON_ASSUME(iter.is_active());
   log_value("string");
   if (*json != '"') { log_error("not a string"); return INCORRECT_TYPE; }
-  return raw_json_string{&json[1]}.unescape(*(iter->parser));
+  auto result = raw_json_string{&json[1]}.unescape(*iter);
+  iter.release();
+  return result;
 }
 simdjson_really_inline simdjson_result<double> value::get_double() noexcept {
   SIMDJSON_ASSUME(iter.is_active());
@@ -64,6 +69,7 @@ simdjson_really_inline simdjson_result<double> value::get_double() noexcept {
   double result;
   error_code error;
   if ((error = stage2::numberparsing::parse_double(json).get(result))) { log_error("not a double"); return error; }
+  iter.release();
   return result;
 }
 simdjson_really_inline simdjson_result<uint64_t> value::get_uint64() noexcept {
@@ -72,6 +78,7 @@ simdjson_really_inline simdjson_result<uint64_t> value::get_uint64() noexcept {
   uint64_t result;
   error_code error;
   if ((error = stage2::numberparsing::parse_unsigned(json).get(result))) { log_error("not a unsigned integer"); return error; }
+  iter.release();
   return result;
 }
 simdjson_really_inline simdjson_result<int64_t> value::get_int64() noexcept {
@@ -80,6 +87,7 @@ simdjson_really_inline simdjson_result<int64_t> value::get_int64() noexcept {
   int64_t result;
   error_code error;
   if ((error = stage2::numberparsing::parse_integer(json).get(result))) { log_error("not an integer"); return error; }
+  iter.release();
   return result;
 }
 simdjson_really_inline simdjson_result<bool> value::get_bool() noexcept {
@@ -89,12 +97,14 @@ simdjson_really_inline simdjson_result<bool> value::get_bool() noexcept {
   auto not_false = stage2::atomparsing::str4ncmp(json, "fals") | (json[4] ^ 'e');
   bool error = (not_true && not_false) || stage2::is_not_structural_or_whitespace(json[not_true ? 5 : 4]);
   if (error) { log_error("not a boolean"); return INCORRECT_TYPE; }
+  iter.release();
   return simdjson_result<bool>(!not_true, error ? INCORRECT_TYPE : SUCCESS);
 }
 simdjson_really_inline bool value::is_null() noexcept {
   SIMDJSON_ASSUME(iter.is_active());
   log_value("null");
   if (stage2::atomparsing::str4ncmp(json, "null")) { return false; }
+  iter.release();
   return true;
 }
 

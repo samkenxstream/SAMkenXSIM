@@ -25,10 +25,6 @@ SIMDJSON_WARN_UNUSED simdjson_really_inline simdjson_result<document> parser::it
 }
 
 SIMDJSON_WARN_UNUSED simdjson_really_inline simdjson_result<json_iterator> parser::iterate_raw(const padded_string &buf) noexcept {
-  if (current_string_buf_loc) {
-    return PARSER_IN_USE;
-  }
-
   // Allocate if needed
   if (_capacity < buf.size()) {
     SIMDJSON_TRY( allocate(buf.size(), _max_depth) );

@@ -8,20 +8,12 @@ simdjson_really_inline json_iterator &json_iterator::operator=(json_iterator &&o
 simdjson_really_inline json_iterator::json_iterator(ondemand::parser *_parser) noexcept
   : token_iterator(_parser->dom_parser.buf, _parser->dom_parser.structural_indexes.get()),
     parser{_parser},
+    current_string_buf_loc{_parser->string_buf.get()},
     active_lease_depth{0}
 {
   logger::log_headers();
-  parser->current_string_buf_loc = parser->string_buf.get();
 }
-
-simdjson_really_inline json_iterator::~json_iterator() noexcept {
-  if (is_alive()) {
-    // json_iterator should not be destroyed before we're done with all active values
-    SIMDJSON_ASSUME(active_lease_depth == 0);
-    // Release the string buf so it can be reused by the next document
-    parser->current_string_buf_loc = nullptr;
-  }
-}
+simdjson_really_inline json_iterator::~json_iterator() noexcept = default;
 
 simdjson_really_inline json_iterator_ref json_iterator::borrow() noexcept {
   SIMDJSON_ASSUME(active_lease_depth == 0);
@@ -236,7 +228,7 @@ simdjson_really_inline bool json_iterator::skip_container() noexcept {
       case ']': case '}':
         logger::log_end_value(*this, "skip");
         depth--;
-        if (depth == 0) { logger::log_event(*this, "end skip", ""); return ch == ']'; }
+        if (depth == 0) { logger::log_event(*this, "end skip", "", 0); return ch == ']'; }
         break;
       // PERF TODO does it skip the depth check when we don't decrement depth?
       case '[': case '{':
@@ -259,20 +251,19 @@ simdjson_really_inline json_iterator_ref::json_iterator_ref(json_iterator *_iter
     lease_depth{_lease_depth}
 {
   SIMDJSON_ASSUME(iter);
+  SIMDJSON_ASSUME(lease_depth > 0);
   SIMDJSON_ASSUME(lease_depth == iter->active_lease_depth);
 }
 simdjson_really_inline json_iterator_ref::json_iterator_ref(json_iterator_ref &&other) noexcept
   : iter{other.iter},
     lease_depth{other.lease_depth}
 {
-  SIMDJSON_ASSUME(is_active());
-  other.iter = nullptr;
+  other.lease_depth = 0;
 }
 simdjson_really_inline json_iterator_ref &json_iterator_ref::operator=(json_iterator_ref &&other) noexcept {
   iter = other.iter;
   lease_depth = other.lease_depth;
-  SIMDJSON_ASSUME(is_active());
-  other.iter = nullptr;
+  other.lease_depth = 0;
   return *this;
 }
 simdjson_really_inline json_iterator_ref::~json_iterator_ref() noexcept {
@@ -286,14 +277,16 @@ simdjson_really_inline json_iterator_ref json_iterator_ref::borrow() noexcept {
   return { iter, child_depth };
 }
 
-simdjson_really_inline void json_iterator_ref::abandon() noexcept {
-  iter->abandon();
-}
-
 simdjson_really_inline void json_iterator_ref::release() noexcept {
   SIMDJSON_ASSUME(is_active());
   iter->active_lease_depth = lease_depth-1;
-  iter = nullptr;
+  lease_depth = 0;
+}
+
+simdjson_really_inline void json_iterator_ref::abandon() noexcept {
+  SIMDJSON_ASSUME(is_active());
+  iter->active_lease_depth = 0;
+  lease_depth = 0;
 }
 
 simdjson_really_inline json_iterator *json_iterator_ref::operator->() noexcept {
@@ -313,7 +306,7 @@ simdjson_really_inline bool json_iterator_ref::is_active() const noexcept {
 }
 
 simdjson_really_inline bool json_iterator_ref::is_alive() const noexcept {
-  return iter && iter->is_alive();
+  return lease_depth != 0;
 }
 
 } // namespace ondemand
