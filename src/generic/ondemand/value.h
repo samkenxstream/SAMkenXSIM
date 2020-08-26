@@ -59,26 +59,19 @@ public:
 
 protected:
   /**
-   * Create a value.
-   *
-   * Use value::read() instead of this.
-   */
-  simdjson_really_inline value(json_iterator &parent, const uint8_t *json) noexcept;
-
-  /**
    * Read a value.
    *
    * If the value is an array or object, only the opening brace will be consumed.
    *
-   * @param doc The document containing the value. Iterator must be at the value start position.
+   * @param iter The iterator lease to use.
    */
-  static simdjson_really_inline value start(json_iterator &parent) noexcept;
+  simdjson_really_inline value(json_iterator_ref &&iter) noexcept;
 
   simdjson_really_inline void log_value(const char *type) const noexcept;
   simdjson_really_inline void log_error(const char *message) const noexcept;
 
+  json_iterator_ref iter{};
   const uint8_t *json{}; // The JSON text of the value
-  json_iterator_lease iter{};
 
   friend class document;
   friend class array;

@@ -4,10 +4,8 @@ namespace {
 namespace SIMDJSON_IMPLEMENTATION {
 namespace ondemand {
 
-class array;
-class object;
-class value;
-class raw_json_string;
+class document;
+class json_iterator;
 
 /**
  * A JSON fragment iterator.
@@ -22,7 +20,8 @@ public:
   simdjson_really_inline parser &operator=(const parser &other) = delete;
 
   SIMDJSON_WARN_UNUSED error_code allocate(size_t capacity, size_t max_depth=DEFAULT_MAX_DEPTH) noexcept;
-  SIMDJSON_WARN_UNUSED simdjson_result<document> parse(const padded_string &json) noexcept;
+  SIMDJSON_WARN_UNUSED simdjson_result<document> iterate(const padded_string &json) noexcept;
+  SIMDJSON_WARN_UNUSED simdjson_result<json_iterator> iterate_raw(const padded_string &json) noexcept;
 private:
   dom_parser_implementation dom_parser{};
   size_t _capacity{0};

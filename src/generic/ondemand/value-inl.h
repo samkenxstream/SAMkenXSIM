@@ -3,101 +3,98 @@ namespace SIMDJSON_IMPLEMENTATION {
 namespace ondemand {
 
 simdjson_really_inline value::value() noexcept = default;
-simdjson_really_inline value::value(json_iterator &_parent_iter, const uint8_t *_json) noexcept
-  : json{_json}, iter{_parent_iter}
+simdjson_really_inline value::value(json_iterator_ref &&_iter) noexcept
+  : iter{std::forward<json_iterator_ref>(_iter)},
+    json{iter->advance()}
 {
-  SIMDJSON_ASSUME(_json != nullptr);
 }
 simdjson_really_inline value::value(value &&other) noexcept = default;
 simdjson_really_inline value &value::operator=(value &&other) noexcept = default;
 
 simdjson_really_inline value::~value() noexcept {
-  if (iter.active()) {
+  if (iter.is_active()) {
     skip();
   }
-}
-
-simdjson_really_inline value value::start(json_iterator &parent_iter) noexcept {
-  return { parent_iter, parent_iter.advance() };
 }
 
 simdjson_really_inline void value::skip() noexcept {
   switch (*json) {
     case '[': case '{':
-      logger::log_start_value(iter, "unused");
-      iter.skip_container();
+      logger::log_start_value(*iter, "unused");
+      iter->skip_container();
       break;
     default:
-      logger::log_value(iter, "unused");
+      logger::log_value(*iter, "unused");
       break;
   }
   iter.release();
 }
 
 simdjson_really_inline simdjson_result<array> value::get_array() noexcept {
+  SIMDJSON_ASSUME(iter.is_active());
   if (*json != '[') {
     log_error("not an array");
     return INCORRECT_TYPE;
   }
-  return array::started(iter.release());
+  return array::started(std::move(iter));
 }
 simdjson_really_inline simdjson_result<object> value::get_object() noexcept {
+  SIMDJSON_ASSUME(iter.is_active());
   if (*json != '{') {
     log_error("not an object");
     return INCORRECT_TYPE;
   }
-  return object::started(iter.release());
+  return object::started(std::move(iter));
 }
 simdjson_really_inline simdjson_result<raw_json_string> value::get_raw_json_string() noexcept {
+  SIMDJSON_ASSUME(iter.is_active());
   log_value("string");
   if (*json != '"') { log_error("not a string"); return INCORRECT_TYPE; }
-  auto result = raw_json_string{&json[1]};
-  iter.release();
-  return result;
+  return raw_json_string{&json[1]};
 }
 simdjson_really_inline simdjson_result<std::string_view> value::get_string() noexcept {
-  error_code error;
-  raw_json_string str;
-  if ((error = get_raw_json_string().get(str))) { return error; }
-  return str.unescape(iter.parser->current_string_buf_loc);
+  SIMDJSON_ASSUME(iter.is_active());
+  log_value("string");
+  if (*json != '"') { log_error("not a string"); return INCORRECT_TYPE; }
+  return raw_json_string{&json[1]}.unescape(*(iter->parser));
 }
 simdjson_really_inline simdjson_result<double> value::get_double() noexcept {
+  SIMDJSON_ASSUME(iter.is_active());
   log_value("double");
   double result;
   error_code error;
   if ((error = stage2::numberparsing::parse_double(json).get(result))) { log_error("not a double"); return error; }
-  iter.release();
   return result;
 }
 simdjson_really_inline simdjson_result<uint64_t> value::get_uint64() noexcept {
+  SIMDJSON_ASSUME(iter.is_active());
   log_value("unsigned");
   uint64_t result;
   error_code error;
   if ((error = stage2::numberparsing::parse_unsigned(json).get(result))) { log_error("not a unsigned integer"); return error; }
-  iter.release();
   return result;
 }
 simdjson_really_inline simdjson_result<int64_t> value::get_int64() noexcept {
+  SIMDJSON_ASSUME(iter.is_active());
   log_value("integer");
   int64_t result;
   error_code error;
   if ((error = stage2::numberparsing::parse_integer(json).get(result))) { log_error("not an integer"); return error; }
-  iter.release();
   return result;
 }
 simdjson_really_inline simdjson_result<bool> value::get_bool() noexcept {
+  SIMDJSON_ASSUME(iter.is_active());
   log_value("bool");
   auto not_true = stage2::atomparsing::str4ncmp(json, "true");
   auto not_false = stage2::atomparsing::str4ncmp(json, "fals") | (json[4] ^ 'e');
   bool error = (not_true && not_false) || stage2::is_not_structural_or_whitespace(json[not_true ? 5 : 4]);
   if (error) { log_error("not a boolean"); return INCORRECT_TYPE; }
-  iter.release();
   return simdjson_result<bool>(!not_true, error ? INCORRECT_TYPE : SUCCESS);
 }
 simdjson_really_inline bool value::is_null() noexcept {
+  SIMDJSON_ASSUME(iter.is_active());
   log_value("null");
   if (stage2::atomparsing::str4ncmp(json, "null")) { return false; }
-  iter.release();
   return true;
 }
 
@@ -124,10 +121,10 @@ simdjson_really_inline simdjson_result<value> value::operator[](const char *key)
 }
 
 simdjson_really_inline void value::log_value(const char *type) const noexcept {
-  logger::log_value(iter, type);
+  logger::log_value(*iter, type);
 }
 simdjson_really_inline void value::log_error(const char *message) const noexcept {
-  logger::log_error(iter, message);
+  logger::log_error(*iter, message);
 }
 
 } // namespace ondemand

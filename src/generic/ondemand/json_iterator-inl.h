@@ -6,20 +6,28 @@ simdjson_really_inline json_iterator::json_iterator() noexcept = default;
 simdjson_really_inline json_iterator::json_iterator(json_iterator &&other) noexcept = default;
 simdjson_really_inline json_iterator &json_iterator::operator=(json_iterator &&other) noexcept = default;
 simdjson_really_inline json_iterator::json_iterator(ondemand::parser *_parser) noexcept
-  : token_iterator(_parser->dom_parser.buf, _parser->dom_parser.structural_indexes.get()), parser{_parser}
+  : token_iterator(_parser->dom_parser.buf, _parser->dom_parser.structural_indexes.get()),
+    parser{_parser},
+    active_lease_depth{0}
 {
   logger::log_headers();
   parser->current_string_buf_loc = parser->string_buf.get();
 }
 
 simdjson_really_inline json_iterator::~json_iterator() noexcept {
-  // Release the string buf so it can be reused by the next document
-  if (active()) {
-    logger::log_end_value(*this, "document");
+  if (is_alive()) {
+    // json_iterator should not be destroyed before we're done with all active values
+    SIMDJSON_ASSUME(active_lease_depth == 0);
+    // Release the string buf so it can be reused by the next document
     parser->current_string_buf_loc = nullptr;
   }
 }
 
+simdjson_really_inline json_iterator_ref json_iterator::borrow() noexcept {
+  SIMDJSON_ASSUME(active_lease_depth == 0);
+  active_lease_depth = 1;
+  return { this, 1 };
+}
 
 SIMDJSON_WARN_UNUSED simdjson_really_inline simdjson_result<bool> json_iterator::start_object() noexcept {
   if (*advance() != '{') { logger::log_error(*this, "Not an object"); return INCORRECT_TYPE; }
@@ -243,27 +251,70 @@ simdjson_really_inline bool json_iterator::skip_container() noexcept {
 }
 
 //
-// json_iterator_lease
+// json_iterator_ref
 //
-simdjson_really_inline json_iterator_lease::json_iterator_lease() noexcept = default;
-simdjson_really_inline json_iterator_lease::json_iterator_lease(json_iterator &_previous_iter) noexcept
-  : json_iterator{std::move(_previous_iter)},
-    previous_iter{&_previous_iter}
+simdjson_really_inline json_iterator_ref::json_iterator_ref() noexcept = default;
+simdjson_really_inline json_iterator_ref::json_iterator_ref(json_iterator *_iter, uint32_t _lease_depth) noexcept
+  : iter{_iter},
+    lease_depth{_lease_depth}
 {
+  SIMDJSON_ASSUME(iter);
+  SIMDJSON_ASSUME(lease_depth == iter->active_lease_depth);
+}
+simdjson_really_inline json_iterator_ref::json_iterator_ref(json_iterator_ref &&other) noexcept
+  : iter{other.iter},
+    lease_depth{other.lease_depth}
+{
+  SIMDJSON_ASSUME(is_active());
+  other.iter = nullptr;
+}
+simdjson_really_inline json_iterator_ref &json_iterator_ref::operator=(json_iterator_ref &&other) noexcept {
+  iter = other.iter;
+  lease_depth = other.lease_depth;
+  SIMDJSON_ASSUME(is_active());
+  other.iter = nullptr;
+  return *this;
+}
+simdjson_really_inline json_iterator_ref::~json_iterator_ref() noexcept {
+  if (is_alive()) { release(); }
 }
 
-simdjson_really_inline json_iterator_lease::json_iterator_lease(json_iterator_lease &&other) noexcept = default;
-simdjson_really_inline json_iterator_lease &json_iterator_lease::operator=(json_iterator_lease &&other) noexcept = default;
-simdjson_really_inline json_iterator_lease::~json_iterator_lease() noexcept {
-  assert(!active());
+simdjson_really_inline json_iterator_ref json_iterator_ref::borrow() noexcept {
+  SIMDJSON_ASSUME(is_active());
+  const uint32_t child_depth = lease_depth+1;
+  iter->active_lease_depth = child_depth;
+  return { iter, child_depth };
 }
 
-simdjson_really_inline json_iterator &json_iterator_lease::release() noexcept {
-  *previous_iter = std::move(*this);
-  abandon();
-  return *previous_iter;
+simdjson_really_inline void json_iterator_ref::abandon() noexcept {
+  iter->abandon();
 }
 
+simdjson_really_inline void json_iterator_ref::release() noexcept {
+  SIMDJSON_ASSUME(is_active());
+  iter->active_lease_depth = lease_depth-1;
+  iter = nullptr;
+}
+
+simdjson_really_inline json_iterator *json_iterator_ref::operator->() noexcept {
+  SIMDJSON_ASSUME(is_active());
+  return iter;
+}
+simdjson_really_inline json_iterator &json_iterator_ref::operator*() noexcept {
+  SIMDJSON_ASSUME(is_active());
+  return *iter;
+}
+simdjson_really_inline const json_iterator &json_iterator_ref::operator*() const noexcept {
+  return *iter;
+}
+
+simdjson_really_inline bool json_iterator_ref::is_active() const noexcept {
+  return is_alive() && iter->active_lease_depth == lease_depth;
+}
+
+simdjson_really_inline bool json_iterator_ref::is_alive() const noexcept {
+  return iter && iter->is_alive();
+}
 
 } // namespace ondemand
 } // namespace SIMDJSON_IMPLEMENTATION

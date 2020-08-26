@@ -2,19 +2,24 @@ namespace {
 namespace SIMDJSON_IMPLEMENTATION {
 namespace ondemand {
 
+simdjson_really_inline document::document() noexcept = default;
 simdjson_really_inline document::document(document &&other) noexcept = default;
 simdjson_really_inline document &document::operator=(document &&other) noexcept = default;
 
-simdjson_really_inline document::document(ondemand::parser *_parser) noexcept : iter(_parser)
+simdjson_really_inline document::document(json_iterator &&_iter) noexcept
+  : iter{std::forward<json_iterator>(_iter)}
 {
   logger::log_start_value(iter, "document");
 }
 
-simdjson_really_inline value document::as_value() noexcept {
-  return value::start(iter);
+simdjson_really_inline document::~document() noexcept {
+  if (iter.is_alive()) {
+    logger::log_end_value(iter, "document");
+  }
 }
-simdjson_really_inline json_iterator document::iterate() noexcept {
-  return std::move(iter);
+
+simdjson_really_inline value document::as_value() noexcept {
+  return iter.borrow();
 }
 
 simdjson_really_inline simdjson_result<array> document::get_array() noexcept { return as_value().get_array(); }
@@ -78,9 +83,6 @@ simdjson_really_inline simdjson_result<SIMDJSON_IMPLEMENTATION::ondemand::value>
 }
 simdjson_really_inline simdjson_result<SIMDJSON_IMPLEMENTATION::ondemand::value> simdjson_result<SIMDJSON_IMPLEMENTATION::ondemand::document>::operator[](const char *key) noexcept {
   return as_value()[key];
-}
-simdjson_really_inline simdjson_result<SIMDJSON_IMPLEMENTATION::ondemand::json_iterator> simdjson_result<SIMDJSON_IMPLEMENTATION::ondemand::document>::iterate() noexcept {
-  return { first.iterate(), error() };
 }
 
 simdjson_really_inline simdjson_result<SIMDJSON_IMPLEMENTATION::ondemand::array> simdjson_result<SIMDJSON_IMPLEMENTATION::ondemand::document>::get_array() noexcept { return as_value().get_array(); }

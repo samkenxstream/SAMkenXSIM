@@ -50,21 +50,21 @@ protected:
   /**
    * Begin array iteration.
    *
-   * @param doc The document containing the array.
+   * @param iter The iterator to use.
    * @error INCORRECT_TYPE if the iterator is not at [.
    */
-  static simdjson_really_inline simdjson_result<array> start(json_iterator &parent_iter) noexcept;
+  static simdjson_really_inline simdjson_result<array> start(json_iterator_ref &&iter) noexcept;
   /**
-   * Begin array iteration.
+   * Begin array iteration, *after* the iterator has already been moved just past the `[`.
    *
-   * @param doc The document containing the array. The iterator must be just after the opening `[`.
+   * @param iter The iterator to use.
    */
-  static simdjson_really_inline array started(json_iterator &parent_iter) noexcept;
+  static simdjson_really_inline array started(json_iterator_ref &&iter) noexcept;
 
   /**
    * Array creation for non-empty objects.
    */
-  simdjson_really_inline array(json_iterator &iter) noexcept;
+  simdjson_really_inline array(json_iterator_ref &&iter) noexcept;
 
   simdjson_really_inline error_code yield_error() noexcept;
 
@@ -73,7 +73,7 @@ protected:
   /**
    * Iterator we're going to move through.
    */
-  json_iterator_lease iter{};
+  json_iterator_ref iter{};
   /**
    * Error, if there is one. Errors are only yielded once.
    *

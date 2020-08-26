@@ -48,16 +48,15 @@ protected:
   /**
    * Begin object iteration.
    *
-   * @param doc The document containing the object. The iterator must be just after the opening `{`.
-   * @param error If this is not SUCCESS, creates an error chained object.
+   * @param iter The iterator to use in the object.
    */
-  static simdjson_really_inline simdjson_result<object> start(json_iterator &parent_iter) noexcept;
-  static simdjson_really_inline object started(json_iterator &parent_iter) noexcept;
+  static simdjson_really_inline simdjson_result<object> start(json_iterator_ref &&iter) noexcept;
+  static simdjson_really_inline object started(json_iterator_ref &&iter) noexcept;
 
   /**
    * Object creation for non-empty objects.
    */
-  simdjson_really_inline object(json_iterator &parent_iter) noexcept;
+  simdjson_really_inline object(json_iterator_ref &&iter) noexcept;
 
   simdjson_really_inline error_code yield_error() noexcept;
 
@@ -66,7 +65,7 @@ protected:
   /**
    * Iterator we're going to move through.
    */
-  json_iterator_lease iter{};
+  json_iterator_ref iter{};
   /**
    * Whether we are at the start.
    * 

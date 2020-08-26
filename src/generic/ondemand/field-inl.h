@@ -7,20 +7,16 @@ simdjson_really_inline field::field() noexcept : std::pair<raw_json_string, onde
 simdjson_really_inline field::field(field &&other) noexcept = default;
 simdjson_really_inline field &field::operator=(field &&other) noexcept = default;
 
-simdjson_really_inline field::field(raw_json_string key, ondemand::value &&value) noexcept
-  : std::pair<raw_json_string, ondemand::value>(key, std::forward<ondemand::value>(value))
+simdjson_really_inline field::field(raw_json_string key, json_iterator_ref &&iter) noexcept
+  : std::pair<raw_json_string, ondemand::value>(key, ondemand::value(std::forward<json_iterator_ref>(iter)))
 {
 }
 
-simdjson_really_inline simdjson_result<field> field::start(json_iterator &parent_iter) noexcept {
+simdjson_really_inline simdjson_result<field> field::start(json_iterator_ref &&iter) noexcept {
   raw_json_string key;
-  SIMDJSON_TRY( parent_iter.field_key().get(key) );
-  SIMDJSON_TRY( parent_iter.field_value() );
-  return field::start(parent_iter, key);
-}
-
-simdjson_really_inline simdjson_result<field> field::start(json_iterator &parent_iter, raw_json_string key) noexcept {
-    return field(key, value::start(parent_iter));
+  SIMDJSON_TRY( iter->field_key().get(key) );
+  SIMDJSON_TRY( iter->field_value() );
+  return field(key, std::forward<json_iterator_ref>(iter));
 }
 
 simdjson_really_inline raw_json_string field::key() const noexcept {

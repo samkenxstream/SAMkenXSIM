@@ -19,11 +19,13 @@ class raw_json_string;
  */
 class document {
 public:
-  simdjson_really_inline document() noexcept = default;
+  simdjson_really_inline document() noexcept;
   simdjson_really_inline document(document &&other) noexcept;
   simdjson_really_inline document &operator=(document &&other) noexcept;
   simdjson_really_inline document(const document &other) = delete;
   simdjson_really_inline document &operator=(const document &other) = delete;
+
+  simdjson_really_inline ~document() noexcept;
 
   simdjson_really_inline simdjson_result<array> get_array() noexcept;
   simdjson_really_inline simdjson_result<object> get_object() noexcept;
@@ -51,10 +53,8 @@ public:
   simdjson_really_inline simdjson_result<value> operator[](std::string_view key) noexcept;
   simdjson_really_inline simdjson_result<value> operator[](const char *key) noexcept;
 
-  simdjson_really_inline json_iterator iterate() noexcept;
-
 protected:
-  simdjson_really_inline document(ondemand::parser *parser) noexcept;
+  simdjson_really_inline document(json_iterator &&iter) noexcept;
   simdjson_really_inline const uint8_t *text(uint32_t idx) const noexcept;
 
   json_iterator iter{}; ///< Current position in the document
@@ -107,8 +107,6 @@ public:
   simdjson_really_inline simdjson_result<SIMDJSON_IMPLEMENTATION::ondemand::array::iterator> end() noexcept;
   simdjson_really_inline simdjson_result<SIMDJSON_IMPLEMENTATION::ondemand::value> operator[](std::string_view key) noexcept;
   simdjson_really_inline simdjson_result<SIMDJSON_IMPLEMENTATION::ondemand::value> operator[](const char *key) noexcept;
-
-  simdjson_really_inline simdjson_result<SIMDJSON_IMPLEMENTATION::ondemand::json_iterator> iterate() noexcept;
 
 protected:
   simdjson_really_inline simdjson_result<SIMDJSON_IMPLEMENTATION::ondemand::value> as_value() noexcept;

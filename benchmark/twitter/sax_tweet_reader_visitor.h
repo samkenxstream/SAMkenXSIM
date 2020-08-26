@@ -283,11 +283,11 @@ simdjson_really_inline void sax_tweet_reader_visitor::field_lookup::add(const ch
   auto index = hash(key, uint32_t(c));
   if (index == 0) {
     fprintf(stderr, "%s (depth %d) hashes to zero, which is used as 'missing value'\n", key, int(c));
-    assert(false);
+    abort();
   }
   if (entries[index].key) {
     fprintf(stderr, "%s (depth %d) collides with %s (depth %d) !\n", key, int(c), entries[index].key, int(entries[index].container));
-    assert(false);
+    abort();
   }
   entries[index] = { key, len, offset, c, type };
 }
@@ -295,7 +295,6 @@ simdjson_really_inline void sax_tweet_reader_visitor::field_lookup::neg(const ch
   auto index = hash(key, depth);
   if (entries[index].key) {
     fprintf(stderr, "%s (depth %d) conflicts with %s (depth %d) !\n", key, depth, entries[index].key, int(entries[index].container));
-    assert(false);
   }
 }
 

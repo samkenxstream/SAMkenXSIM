@@ -37,7 +37,7 @@ using namespace haswell;
 
 simdjson_really_inline uint64_t nullable_int(ondemand::value && value) {
   if (value.is_null()) { return 0; }
-  return std::move(value);
+  return std::move(value); 
 }
 
 simdjson_really_inline twitter::twitter_user read_user(ondemand::object && user) {
@@ -48,7 +48,7 @@ simdjson_really_inline twitter::twitter_user read_user(ondemand::object && user)
 }
 simdjson_really_inline void read_tweets(ondemand::parser &parser, padded_string &json, std::vector<twitter::tweet> &tweets) {
   // Walk the document, parsing the tweets as we go
-  auto doc = parser.parse(json);
+  auto doc = parser.iterate(json);
   auto root = doc.get_object();
   ondemand::array statuses = root["statuses"];
   for (ondemand::object tweet : statuses) {
@@ -111,8 +111,7 @@ simdjson_really_inline void read_tweets(ondemand::parser &parser, padded_string 
   // Walk the document, parsing the tweets as we go
 
   // { "statuses": 
-  auto doc = parser.parse(json);
-  ondemand::json_iterator iter = doc.iterate();
+  ondemand::json_iterator iter = parser.iterate_raw(json);
   if (!iter.start_object()   || !iter.find_field_raw("statuses")) { throw; }
   // { "statuses": [
   if (!iter.start_array()) { throw; }
@@ -411,7 +410,7 @@ static void ondemand_largerandom(State &state) {
   size_t points = 0;
   for (SIMDJSON_UNUSED auto _ : state) {
     std::vector<my_point> container;
-    auto doc = parser.parse(json);
+    auto doc = parser.iterate(json);
     ondemand::array array = doc.get_array();
     for (ondemand::object point_object : array) {
       auto point = point_object.begin();
@@ -465,8 +464,7 @@ static void iter_largerandom(State &state) {
   size_t points = 0;
   for (SIMDJSON_UNUSED auto _ : state) {
     std::vector<my_point> container;
-    auto doc = parser.parse(json);
-    ondemand::json_iterator iter = doc.iterate();
+    ondemand::json_iterator iter = parser.iterate_raw(json);
     if (iter.start_array()) {
       do {
         container.emplace_back(my_point{first_double(iter), next_double(iter), next_double(iter)});

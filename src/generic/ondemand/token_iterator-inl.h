@@ -19,10 +19,10 @@ simdjson_really_inline token_iterator &token_iterator::operator=(token_iterator 
   return *this;
 }
 simdjson_really_inline void token_iterator::abandon() noexcept {
-  assert(active());
+  SIMDJSON_ASSUME(is_alive());
   index = nullptr;
 }
-simdjson_really_inline bool token_iterator::active() const noexcept {
+simdjson_really_inline bool token_iterator::is_alive() const noexcept {
   return index;
 }
 
