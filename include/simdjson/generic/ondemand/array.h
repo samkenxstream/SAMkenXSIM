@@ -28,13 +28,13 @@ public:
    *
    * Part of the std::iterable interface.
    */
-  simdjson_really_inline array_iterator<array> begin() & noexcept;
+  simdjson_really_inline array_iterator begin() & noexcept;
   /**
    * Sentinel representing the end of the array.
    *
    * Part of the std::iterable interface.
    */
-  simdjson_really_inline array_iterator<array> end() & noexcept;
+  simdjson_really_inline array_iterator end() & noexcept;
 
 protected:
   /**
@@ -44,8 +44,7 @@ protected:
    *        resulting array.
    * @error INCORRECT_TYPE if the iterator is not at [.
    */
-  static simdjson_really_inline simdjson_result<array> start(json_iterator_ref &&iter) noexcept;
-  static simdjson_really_inline simdjson_result<array> start(const uint8_t *json, json_iterator_ref &&iter) noexcept;
+  static simdjson_really_inline simdjson_result<array> start(json_iterator *iter) noexcept;
   /**
    * Begin array iteration.
    *
@@ -54,7 +53,7 @@ protected:
    *
    * @param iter The iterator. Must be after the initial [. Will be *moved* into the resulting array.
    */
-  static simdjson_really_inline array started(json_iterator_ref &&iter) noexcept;
+  static simdjson_really_inline array started(json_iterator *iter) noexcept;
 
   /**
    * Create an array at the given Internal array creation. Call array::start() or array::started() instead of this.
@@ -63,30 +62,19 @@ protected:
    *        == true, or past the [] with is_alive() == false if the array is empty. Will be *moved*
    *        into the resulting array.
    */
-  simdjson_really_inline array(json_iterator_ref &&iter) noexcept;
-
-  //
-  // For array_iterator
-  //
-  simdjson_really_inline json_iterator &get_iterator() noexcept;
-  simdjson_really_inline json_iterator_ref borrow_iterator_child() noexcept;
-  simdjson_really_inline bool is_iterator_alive() const noexcept;
-  simdjson_really_inline void start_iterator() noexcept;
-  simdjson_really_inline void finish_iterator() noexcept;
-  simdjson_really_inline void abandon_iterator() noexcept;
-  simdjson_warn_unused simdjson_really_inline error_code finish_iterator_child() noexcept;
+  simdjson_really_inline array(json_iterator *iter) noexcept;
 
   /**
    * Iterator marking current position.
    *
    * iter.is_alive() == false indicates iteration is complete.
    */
-  json_iterator_ref iter{};
+  json_iterator *iter{};
 
   friend class value;
   friend struct simdjson_result<value>;
   friend struct simdjson_result<array>;
-  friend class array_iterator<array>;
+  friend class array_iterator;
 };
 
 } // namespace ondemand

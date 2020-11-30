@@ -16,13 +16,12 @@ class document;
  * - * must be called exactly once per element.
  * - ++ must be called exactly once in between each * (*, ++, *, ++, * ...)
  */
-template<typename T>
 class array_iterator {
 public:
   /** Create a new, invalid array iterator. */
   simdjson_really_inline array_iterator() noexcept = default;
-  simdjson_really_inline array_iterator(const array_iterator<T> &a) noexcept = default;
-  simdjson_really_inline array_iterator<T> &operator=(const array_iterator<T> &a) noexcept = default;
+  simdjson_really_inline array_iterator(const array_iterator &a) noexcept = default;
+  simdjson_really_inline array_iterator &operator=(const array_iterator &a) noexcept = default;
 
   //
   // Iterator interface
@@ -41,7 +40,7 @@ public:
    *
    * @return true if there are no more elements in the JSON array.
    */
-  simdjson_really_inline bool operator==(const array_iterator<T> &) noexcept;
+  simdjson_really_inline bool operator==(const array_iterator &) noexcept;
   /**
    * Check if there are more elements in the JSON array.
    *
@@ -49,25 +48,23 @@ public:
    *
    * @return true if there are more elements in the JSON array.
    */
-  simdjson_really_inline bool operator!=(const array_iterator<T> &) noexcept;
+  simdjson_really_inline bool operator!=(const array_iterator &) noexcept;
   /**
    * Move to the next element.
    *
    * Part of the std::iterator interface.
    */
-  simdjson_really_inline array_iterator<T> &operator++() noexcept;
+  simdjson_really_inline array_iterator &operator++() noexcept;
 
 private:
-  T *iter{};
+  json_iterator *iter{};
+  depth_t depth{};
 
-  simdjson_really_inline array_iterator(T &iter) noexcept;
+  simdjson_really_inline array_iterator(json_iterator *iter, depth_t depth) noexcept;
 
-  static simdjson_really_inline simdjson_result<array_iterator<T>> start(T &iter, const uint8_t *json) noexcept;
-
-  friend T;
   friend class array;
   friend class value;
-  friend struct simdjson_result<array_iterator<T>>;
+  friend struct simdjson_result<array_iterator>;
 };
 
 } // namespace ondemand
@@ -76,14 +73,14 @@ private:
 
 namespace simdjson {
 
-template<typename T>
-struct simdjson_result<SIMDJSON_IMPLEMENTATION::ondemand::array_iterator<T>> : public SIMDJSON_IMPLEMENTATION::implementation_simdjson_result_base<SIMDJSON_IMPLEMENTATION::ondemand::array_iterator<T>> {
+template<>
+struct simdjson_result<SIMDJSON_IMPLEMENTATION::ondemand::array_iterator> : public SIMDJSON_IMPLEMENTATION::implementation_simdjson_result_base<SIMDJSON_IMPLEMENTATION::ondemand::array_iterator> {
 public:
-  simdjson_really_inline simdjson_result(SIMDJSON_IMPLEMENTATION::ondemand::array_iterator<T> &&value) noexcept; ///< @private
+  simdjson_really_inline simdjson_result(SIMDJSON_IMPLEMENTATION::ondemand::array_iterator &&value) noexcept; ///< @private
   simdjson_really_inline simdjson_result(error_code error) noexcept; ///< @private
 
   simdjson_really_inline simdjson_result() noexcept = default;
-  simdjson_really_inline simdjson_result(simdjson_result<SIMDJSON_IMPLEMENTATION::ondemand::array_iterator<T>> &&a) noexcept = default;
+  simdjson_really_inline simdjson_result(simdjson_result<SIMDJSON_IMPLEMENTATION::ondemand::array_iterator> &&a) noexcept = default;
   simdjson_really_inline ~simdjson_result() noexcept = default; ///< @private
 
   //
@@ -91,9 +88,9 @@ public:
   //
 
   simdjson_really_inline simdjson_result<SIMDJSON_IMPLEMENTATION::ondemand::value> operator*() noexcept; // MUST ONLY BE CALLED ONCE PER ITERATION.
-  simdjson_really_inline bool operator==(const simdjson_result<SIMDJSON_IMPLEMENTATION::ondemand::array_iterator<T>> &) noexcept;
-  simdjson_really_inline bool operator!=(const simdjson_result<SIMDJSON_IMPLEMENTATION::ondemand::array_iterator<T>> &) noexcept;
-  simdjson_really_inline simdjson_result<SIMDJSON_IMPLEMENTATION::ondemand::array_iterator<T>> &operator++() noexcept;
+  simdjson_really_inline bool operator==(const simdjson_result<SIMDJSON_IMPLEMENTATION::ondemand::array_iterator> &) noexcept;
+  simdjson_really_inline bool operator!=(const simdjson_result<SIMDJSON_IMPLEMENTATION::ondemand::array_iterator> &) noexcept;
+  simdjson_really_inline simdjson_result<SIMDJSON_IMPLEMENTATION::ondemand::array_iterator> &operator++() noexcept;
 };
 
 } // namespace simdjson

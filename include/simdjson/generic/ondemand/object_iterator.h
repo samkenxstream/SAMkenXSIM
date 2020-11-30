@@ -32,8 +32,28 @@ public:
   // Checks for ']' and ','
   simdjson_really_inline object_iterator &operator++() noexcept;
 private:
-  json_iterator_ref *iter{};
-  simdjson_really_inline object_iterator(json_iterator_ref &iter) noexcept;
+  /**
+   * The underlying JSON iterator.
+   *
+   * PERF NOTE: expected to be elided in favor of the parent document: this is set when the object
+   * is first used, and never changes afterwards.
+   */
+  json_iterator *iter{};
+  /**
+   * Depth of values in this object.
+   * 
+   * PERF NOTE: this is a known constant in most cases, and as such should be elided.
+   */
+  depth_t value_depth{};
+  /**
+   * Whether we are at the start.
+   *
+   * PERF NOTE: this should be elided into inline control flow: it is only used for the first []
+   * or * call, and SSA optimizers commonly do first-iteration loop optimization.
+   */
+  bool at_start{};
+  
+  simdjson_really_inline object_iterator(json_iterator *iter) noexcept;
   friend struct simdjson_result<object_iterator>;
   friend class object;
 };

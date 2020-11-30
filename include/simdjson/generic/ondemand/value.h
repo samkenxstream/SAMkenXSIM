@@ -22,15 +22,11 @@ public:
    */
   simdjson_really_inline value() noexcept = default;
 
-  simdjson_really_inline value(value &&other) noexcept;
-  simdjson_really_inline value &operator=(value && other) noexcept;
+  simdjson_really_inline value(value &&other) noexcept = default;
+  simdjson_really_inline value &operator=(value && other) noexcept = default;
   simdjson_really_inline value(const value &) noexcept = delete;
   simdjson_really_inline value &operator=(const value &) noexcept = delete;
-
-  /**
-   * Skips the value if the value was not successfully parsed or used.
-   */
-  simdjson_really_inline ~value() noexcept;
+  simdjson_really_inline ~value() noexcept = default;
 
   /**
    * Get this value as the given type.
@@ -246,13 +242,13 @@ public:
    *
    * @returns INCORRECT_TYPE If the JSON value is not an array.
    */
-  simdjson_really_inline simdjson_result<array_iterator<value>> begin() & noexcept;
+  simdjson_really_inline simdjson_result<array_iterator> begin() & noexcept;
   /**
    * Sentinel representing the end of the array.
    *
    * Part of the std::iterable interface.
    */
-  simdjson_really_inline simdjson_result<array_iterator<value>> end() & noexcept;
+  simdjson_really_inline simdjson_result<array_iterator> end() & noexcept;
 
 protected:
   /**
@@ -260,7 +256,7 @@ protected:
    *
    * Use value::read() instead of this.
    */
-  simdjson_really_inline value(json_iterator_ref &&iter, const uint8_t *json) noexcept;
+  simdjson_really_inline value(json_iterator_ref &&iter) noexcept;
 
   /**
    * Read a value.
@@ -279,25 +275,7 @@ protected:
   simdjson_really_inline void log_value(const char *type) const noexcept;
   simdjson_really_inline void log_error(const char *message) const noexcept;
 
-  //
-  // For array_iterator
-  //
-  simdjson_really_inline json_iterator &get_iterator() noexcept;
-  simdjson_really_inline json_iterator_ref borrow_iterator_child() noexcept;
-  simdjson_really_inline bool is_iterator_alive() const noexcept;
-  simdjson_really_inline void start_iterator() noexcept;
-  simdjson_really_inline void finish_iterator() noexcept;
-  simdjson_really_inline void abandon_iterator() noexcept;
-  simdjson_warn_unused simdjson_really_inline error_code finish_iterator_child() noexcept;
-
-  simdjson_really_inline const uint8_t *consume() noexcept;
-  simdjson_really_inline json_iterator_ref consume_container() noexcept;
-  template<typename T>
-  simdjson_really_inline simdjson_result<T> consume_if_success(simdjson_result<T> &&result) noexcept;
-  simdjson_warn_unused simdjson_really_inline error_code consume_if_success(error_code error) noexcept;
-
-  json_iterator_ref iter{};
-  const uint8_t *json{}; // The JSON text of the value
+  json_iterator *iter{};
 
   friend class document;
   template<typename T> friend class array_iterator;

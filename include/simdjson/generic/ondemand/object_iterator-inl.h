@@ -6,7 +6,7 @@ namespace ondemand {
 // object_iterator
 //
 
-simdjson_really_inline object_iterator::object_iterator(json_iterator_ref &_iter) noexcept : iter{&_iter} {}
+simdjson_really_inline object_iterator::object_iterator(json_iterator *_iter) noexcept : iter{_iter}, value_depth{_iter.depth} {}
 
 simdjson_really_inline simdjson_result<field> object_iterator::operator*() noexcept {
   error_code error = (*iter)->error();

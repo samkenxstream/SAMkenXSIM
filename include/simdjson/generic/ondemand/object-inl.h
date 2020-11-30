@@ -43,13 +43,6 @@ namespace ondemand {
 //   In this state, iter->depth < depth, at_start == false, and error == SUCCESS.
 //
 
-simdjson_really_inline object::object(json_iterator_ref &&_iter) noexcept
-  : iter{std::forward<json_iterator_ref>(_iter)},
-    at_start{iter.is_alive()}
-{
-}
-
-
 simdjson_really_inline error_code object::find_field(const std::string_view key) noexcept {
   if (!iter.is_alive()) { return NO_SUCH_FIELD; }
 
@@ -94,7 +87,7 @@ simdjson_really_inline simdjson_result<value> object::operator[](const std::stri
   return value::start(iter.borrow());
 }
 
-simdjson_really_inline simdjson_result<object> object::start(json_iterator_ref &&iter) noexcept {
+simdjson_really_inline simdjson_result<object> object::start(json_iterator *iter) noexcept {
   bool has_value;
   SIMDJSON_TRY( iter->start_object().get(has_value) );
   if (has_value) { iter.started_container(); } else { iter.abandon(); }
@@ -107,7 +100,7 @@ simdjson_really_inline simdjson_result<object> object::start(const uint8_t *json
   return object(std::forward<json_iterator_ref>(iter));
 }
 simdjson_really_inline object object::started(json_iterator_ref &&iter) noexcept {
-  if (iter->started_object()) { iter.started_container(); } else { iter.abandon(); }
+  iter->started_object();
   return object(std::forward<json_iterator_ref>(iter));
 }
 simdjson_really_inline object_iterator object::begin() noexcept {
