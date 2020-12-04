@@ -2,27 +2,27 @@ namespace simdjson {
 namespace SIMDJSON_IMPLEMENTATION {
 namespace ondemand {
 
-simdjson_really_inline array_iterator::array_iterator(json_iterator *_iter, depth_t _depth) noexcept
-  : iter{_iter}, depth{_depth}
+simdjson_really_inline array_iterator::array_iterator(const value_iterator &_iter) noexcept
+  : iter{_iter}
 {}
 
 simdjson_really_inline simdjson_result<value> array_iterator::operator*() noexcept {
-  if (iter->error()) { return iter->error(); }
-  return iter;
+  if (iter.error()) { iter.abandon(); return iter.error(); }
+  return value(iter.child());
 }
 simdjson_really_inline bool array_iterator::operator==(const array_iterator &other) noexcept {
   return !(*this != other);
 }
 simdjson_really_inline bool array_iterator::operator!=(const array_iterator &) noexcept {
-  return iter->is_below(depth);
+  return iter.is_open();
 }
 simdjson_really_inline array_iterator &array_iterator::operator++() noexcept {
   error_code error;
   // PERF NOTE this is a safety rail ... users should exit loops as soon as they receive an error, so we'll never get here.
   // However, it does not seem to make a perf difference, so we add it out of an abundance of caution.
-  if ((error = iter->error()) ) { return *this; }
-  if ((error = iter->finish_iterator_child() )) { return *this; }
-  if ((error = iter->get_iterator().has_next_element().error() )) { return *this; }
+  if ((error = iter.error()) ) { return *this; }
+  if ((error = iter.finish_child() )) { return *this; }
+  if ((error = iter.has_next_element().error() )) { return *this; }
   return *this;
 }
 

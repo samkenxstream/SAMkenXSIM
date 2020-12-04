@@ -14,7 +14,7 @@ class parser;
  *
  * @private This is not intended for external use.
  */
-class json_iterator : public token_iterator {
+class json_iterator {
 protected:
   token_iterator token{};
   ondemand::parser *parser{};
@@ -23,7 +23,7 @@ protected:
    *
    * Used by raw_json_string::unescape() to have a place to unescape strings to.
    */
-  uint8_t *current_string_buf_loc{};
+  uint8_t *_string_buf_loc{};
   /**
    * JSON error, if there is one.
    *
@@ -34,7 +34,7 @@ protected:
    * this is not elided, we should make sure it's at least not using up a register. Failing that,
    * we should store it in document so there's only one of them.
    */
-  error_code error{};
+  error_code error{SUCCESS};
   /**
    * Depth of the current token in the JSON.
    * 
@@ -43,7 +43,7 @@ protected:
    * - 2 = , or } inside root array/object
    * - 3 = key or value inside root array/object.
    */
-  depth_t depth{};
+  depth_t _depth{};
 
 public:
   simdjson_really_inline json_iterator() noexcept = default;
@@ -55,7 +55,7 @@ public:
   /**
    * Skips a JSON value, whether it is a scalar, array or object.
    */
-  simdjson_warn_unused simdjson_really_inline error_code skip() noexcept;
+  simdjson_warn_unused simdjson_really_inline error_code skip_child(depth_t parent_depth) noexcept;
 
   /**
    * Finishes iteration of a child in an object or array.
@@ -78,9 +78,18 @@ public:
   simdjson_really_inline bool is_alive() const noexcept;
 
   /**
-   * Advance, and increment/decrement depth while you're at it.
+   * Abandon this iterator, setting depth to 0 (as if the document is finished).
    */
-  simdjson_really_inline const uint8_t *advance(depth_t delta_depth) noexcept;
+  simdjson_really_inline void abandon() noexcept;
+
+  /**
+   * Advance the current token.
+   */
+  simdjson_really_inline const uint8_t *advance() noexcept;
+
+  /**
+   * Whether we are at the start of an object.
+   */
 
   /**
    * Get the JSON text for a given token (relative).
@@ -103,12 +112,47 @@ public:
   simdjson_really_inline uint32_t peek_length(int32_t delta=0) const noexcept;
 
   /**
+   * Ascend one level.
+   * 
+   * Validates that the depth - 1 == parent_depth.
+   * 
+   * @param parent_depth the expected parent depth.
+   */
+  simdjson_really_inline void ascend_to(depth_t parent_depth) noexcept;
+
+  /**
+   * Descend one level.
+   * 
+   * Validates that the new depth == child_depth.
+   * 
+   * @param child_depth the expected child depth.
+   */
+  simdjson_really_inline void descend_to(depth_t parent_depth) noexcept;
+
+  /**
+   * Get current depth.
+   */
+  simdjson_really_inline depth_t depth() const noexcept;
+
+  /**
+   * Get current (writeable) location in the string buffer.
+   */
+  simdjson_really_inline uint8_t *&string_buf_loc() noexcept;
+
+  /**
    * Report an error, preventing further iteration.
    *
    * @param error The error to report. Must not be SUCCESS, UNINITIALIZED, INCORRECT_TYPE, or NO_SUCH_FIELD.
    * @param message An error message to report with the error.
    */
   simdjson_really_inline error_code report_error(error_code error, const char *message) noexcept;
+
+  /**
+   * Log error, but don't stop iteration.
+   * @param error The error to report. Must be INCORRECT_TYPE, or NO_SUCH_FIELD.
+   * @param message An error message to report with the error.
+   */
+  simdjson_really_inline error_code optional_error(error_code error, const char *message) noexcept;
 
   template<int N> simdjson_warn_unused simdjson_really_inline bool copy_to_buffer(const uint8_t *json, uint32_t max_len, uint8_t (&tmpbuf)[N]) noexcept;
   template<int N> simdjson_warn_unused simdjson_really_inline bool peek_to_buffer(uint8_t (&tmpbuf)[N]) noexcept;

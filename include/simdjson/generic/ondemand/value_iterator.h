@@ -20,9 +20,9 @@ class parser;
 class value_iterator {
 protected:
   /** The underlying JSON iterator */
-  json_iterator *iter{};
+  json_iterator *_json_iter{};
   /** The depth of this value */
-  depth_t depth{};
+  depth_t _depth{};
 
 public:
   simdjson_really_inline value_iterator() noexcept = default;
@@ -37,9 +37,16 @@ public:
   simdjson_really_inline void start_document() noexcept;
 
   /**
-   * Skips a JSON value, whether it is a scalar, array or object.
+   * Skips a non-iterated JSON value, whether it is a scalar, array or object.
+   * 
+   * Optimized for scalars.
    */
-  simdjson_warn_unused simdjson_really_inline error_code skip() noexcept;
+  simdjson_warn_unused simdjson_really_inline error_code skip_child() noexcept;
+
+  /**
+   * Skips a possibly-partially-iterated JSON value, whether it is a scalar, array or object.
+   */
+  simdjson_warn_unused simdjson_really_inline error_code finish_child() noexcept;
 
   /**
    * Tell whether the iterator is at the EOF mark
@@ -52,9 +59,19 @@ public:
   simdjson_really_inline bool is_open() const noexcept;
 
   /**
+   * Abandon all iteration.
+   */
+  simdjson_really_inline void abandon() noexcept;
+
+  /**
    * Get the child value as a value_iterator.
    */
   simdjson_really_inline value_iterator child_value() const noexcept;
+
+  /**
+   * Get the depth of this value.
+   */
+  simdjson_really_inline depth_t depth() const noexcept;
 
   /**
    * @addtogroup object Object iteration
@@ -114,6 +131,31 @@ public:
    * Find the next field with the given key.
    *
    * Assumes you have called next_field() or otherwise matched the previous value.
+   * 
+   * This means the iterator must be sitting at the next key:
+   * 
+   * ```
+   * { "a": 1, "b": 2 }
+   *           ^
+   * ```
+   *
+   * Key is *raw JSON,* meaning it will be matched against the verbatim JSON without attempting to
+   * unescape it. This works well for typical ASCII and UTF-8 keys (almost all of them), but may
+   * fail to match some keys with escapes (\u, \n, etc.).
+   */
+  simdjson_warn_unused simdjson_really_inline error_code find_field(const std::string_view key) noexcept;
+
+  /**
+   * Find the next field with the given key, *without* unescaping.
+   *
+   * Assumes you have called next_field() or otherwise matched the previous value.
+   * 
+   * This means the iterator must be sitting at the next key:
+   * 
+   * ```
+   * { "a": 1, "b": 2 }
+   *           ^
+   * ```
    *
    * Key is *raw JSON,* meaning it will be matched against the verbatim JSON without attempting to
    * unescape it. This works well for typical ASCII and UTF-8 keys (almost all of them), but may
@@ -166,6 +208,11 @@ public:
    */
   simdjson_warn_unused simdjson_really_inline simdjson_result<bool> has_next_element() noexcept;
 
+  /**
+   * Get a child value iterator.
+   */
+  simdjson_warn_unused simdjson_really_inline value_iterator child() const noexcept;
+
   /** @} */
 
   /**
@@ -186,7 +233,7 @@ public:
   simdjson_warn_unused simdjson_really_inline simdjson_result<double> require_double() noexcept;
   simdjson_warn_unused simdjson_really_inline simdjson_result<bool> try_get_bool() noexcept;
   simdjson_warn_unused simdjson_really_inline simdjson_result<bool> require_bool() noexcept;
-  simdjson_really_inline bool require_null(const uint8_t *json) noexcept;
+  simdjson_really_inline bool require_null() noexcept;
   simdjson_really_inline bool is_null() noexcept;
 
   simdjson_warn_unused simdjson_really_inline simdjson_result<uint64_t> try_get_root_uint64() noexcept;
@@ -197,13 +244,25 @@ public:
   simdjson_warn_unused simdjson_really_inline simdjson_result<double> require_root_double() noexcept;
   simdjson_warn_unused simdjson_really_inline simdjson_result<bool> try_get_root_bool() noexcept;
   simdjson_warn_unused simdjson_really_inline simdjson_result<bool> require_root_bool() noexcept;
-  simdjson_really_inline bool require_root_null(const uint8_t *json) noexcept;
+  simdjson_really_inline bool require_root_null() noexcept;
   simdjson_really_inline bool is_root_null() noexcept;
+
+  simdjson_really_inline error_code error() const noexcept;
+  simdjson_really_inline uint8_t *&string_buf_loc() noexcept;
+  simdjson_really_inline const json_iterator &json_iter() const noexcept;
+  simdjson_really_inline json_iterator &json_iter() noexcept;
 
   /** @} */
 
 protected:
-  simdjson_really_inline value_iterator(json_iterator *_iter, uint32_t _depth) noexcept;
+  simdjson_really_inline value_iterator(json_iterator *json_iter, depth_t depth) noexcept;
+  simdjson_really_inline bool is_null(const uint8_t *json) const noexcept;
+  simdjson_really_inline simdjson_result<bool> parse_bool(const uint8_t *json) const noexcept;
+  simdjson_really_inline bool is_root_null(const uint8_t *json, uint32_t max_len) const noexcept;
+  simdjson_really_inline simdjson_result<bool> parse_root_bool(const uint8_t *json, uint32_t max_len) const noexcept;
+  simdjson_really_inline simdjson_result<uint64_t> parse_root_uint64(const uint8_t *json, uint32_t max_len) const noexcept;
+  simdjson_really_inline simdjson_result<int64_t> parse_root_int64(const uint8_t *json, uint32_t max_len) const noexcept;
+  simdjson_really_inline simdjson_result<double> parse_root_double(const uint8_t *json, uint32_t max_len) const noexcept;
 
   friend class document;
   friend class object;

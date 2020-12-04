@@ -20,8 +20,6 @@ class array_iterator {
 public:
   /** Create a new, invalid array iterator. */
   simdjson_really_inline array_iterator() noexcept = default;
-  simdjson_really_inline array_iterator(const array_iterator &a) noexcept = default;
-  simdjson_really_inline array_iterator &operator=(const array_iterator &a) noexcept = default;
 
   //
   // Iterator interface
@@ -57,10 +55,9 @@ public:
   simdjson_really_inline array_iterator &operator++() noexcept;
 
 private:
-  json_iterator *iter{};
-  depth_t depth{};
+  value_iterator iter{};
 
-  simdjson_really_inline array_iterator(json_iterator *iter, depth_t depth) noexcept;
+  simdjson_really_inline array_iterator(const value_iterator &iter) noexcept;
 
   friend class array;
   friend class value;

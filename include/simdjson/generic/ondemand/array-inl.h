@@ -40,24 +40,30 @@ namespace ondemand {
 //   error == SUCCESS.
 //
 
-simdjson_really_inline array::array(json_iterator *_iter) noexcept
+simdjson_really_inline array::array(const value_iterator &_iter) noexcept
   : iter{_iter}
 {
 }
 
-simdjson_really_inline simdjson_result<array> array::start(json_iterator *iter) noexcept {
-  SIMDJSON_TRY( iter->start_array() );
+simdjson_really_inline simdjson_result<array> array::start(value_iterator &iter) noexcept {
+  simdjson_unused bool has_value;
+  SIMDJSON_TRY( iter.start_array().get(has_value) );
   return array(iter);
 }
-simdjson_really_inline array array::started(json_iterator *iter) noexcept {
-  iter->started_array();
+simdjson_really_inline simdjson_result<array> array::try_start(value_iterator &iter) noexcept {
+  simdjson_unused bool has_value;
+  SIMDJSON_TRY( iter.try_start_array().get(has_value) );
+  return array(iter);
+}
+simdjson_really_inline array array::started(value_iterator &iter) noexcept {
+  simdjson_unused bool has_value = iter.started_array();
   return array(iter);
 }
 
-simdjson_really_inline array_iterator array::begin() & noexcept {
-  return *this;
+simdjson_really_inline array_iterator array::begin() noexcept {
+  return iter;
 }
-simdjson_really_inline array_iterator array::end() & noexcept {
+simdjson_really_inline array_iterator array::end() noexcept {
   return {};
 }
 
@@ -82,11 +88,11 @@ simdjson_really_inline simdjson_result<SIMDJSON_IMPLEMENTATION::ondemand::array>
 {
 }
 
-simdjson_really_inline simdjson_result<SIMDJSON_IMPLEMENTATION::ondemand::array_iterator<SIMDJSON_IMPLEMENTATION::ondemand::array>> simdjson_result<SIMDJSON_IMPLEMENTATION::ondemand::array>::begin() & noexcept {
+simdjson_really_inline simdjson_result<SIMDJSON_IMPLEMENTATION::ondemand::array_iterator> simdjson_result<SIMDJSON_IMPLEMENTATION::ondemand::array>::begin() noexcept {
   if (error()) { return error(); }
   return first.begin();
 }
-simdjson_really_inline simdjson_result<SIMDJSON_IMPLEMENTATION::ondemand::array_iterator<SIMDJSON_IMPLEMENTATION::ondemand::array>> simdjson_result<SIMDJSON_IMPLEMENTATION::ondemand::array>::end() & noexcept {
+simdjson_really_inline simdjson_result<SIMDJSON_IMPLEMENTATION::ondemand::array_iterator> simdjson_result<SIMDJSON_IMPLEMENTATION::ondemand::array>::end() noexcept {
   if (error()) { return error(); }
   return first.end();
 }

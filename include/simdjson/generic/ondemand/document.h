@@ -232,6 +232,7 @@ protected:
   simdjson_really_inline const uint8_t *text(uint32_t idx) const noexcept;
 
   simdjson_really_inline value as_value() noexcept;
+  simdjson_really_inline value_iterator as_value_iterator() noexcept;
   static simdjson_really_inline document start(ondemand::json_iterator &&iter) noexcept;
 
   simdjson_really_inline void assert_at_start() const noexcept;
@@ -295,8 +296,8 @@ public:
   simdjson_really_inline operator bool() noexcept(false);
 #endif
 
-  simdjson_really_inline simdjson_result<SIMDJSON_IMPLEMENTATION::ondemand::array_iterator<SIMDJSON_IMPLEMENTATION::ondemand::document>> begin() & noexcept;
-  simdjson_really_inline simdjson_result<SIMDJSON_IMPLEMENTATION::ondemand::array_iterator<SIMDJSON_IMPLEMENTATION::ondemand::document>> end() & noexcept;
+  simdjson_really_inline simdjson_result<SIMDJSON_IMPLEMENTATION::ondemand::array_iterator> begin() & noexcept;
+  simdjson_really_inline simdjson_result<SIMDJSON_IMPLEMENTATION::ondemand::array_iterator> end() & noexcept;
   simdjson_really_inline simdjson_result<SIMDJSON_IMPLEMENTATION::ondemand::value> operator[](std::string_view key) & noexcept;
   simdjson_really_inline simdjson_result<SIMDJSON_IMPLEMENTATION::ondemand::value> operator[](const char *key) & noexcept;
 };

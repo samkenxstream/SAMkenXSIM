@@ -24,8 +24,8 @@ public:
 
   simdjson_really_inline value(value &&other) noexcept = default;
   simdjson_really_inline value &operator=(value && other) noexcept = default;
-  simdjson_really_inline value(const value &) noexcept = delete;
-  simdjson_really_inline value &operator=(const value &) noexcept = delete;
+  simdjson_really_inline value(const value &) noexcept = default;
+  simdjson_really_inline value &operator=(const value &) noexcept = default;
   simdjson_really_inline ~value() noexcept = default;
 
   /**
@@ -256,29 +256,20 @@ protected:
    *
    * Use value::read() instead of this.
    */
-  simdjson_really_inline value(json_iterator_ref &&iter) noexcept;
-
-  /**
-   * Read a value.
-   *
-   * If the value is an array or object, only the opening brace will be consumed.
-   *
-   * @param doc The document containing the value. Iterator must be at the value start position.
-   */
-  static simdjson_really_inline value start(json_iterator_ref &&iter) noexcept;
+  simdjson_really_inline value(const value_iterator &iter) noexcept;
 
   /**
    * Skip this value, allowing iteration to continue.
    */
   simdjson_really_inline void skip() noexcept;
 
-  simdjson_really_inline void log_value(const char *type) const noexcept;
-  simdjson_really_inline void log_error(const char *message) const noexcept;
+  // simdjson_really_inline void log_value(const char *type) const noexcept;
+  // simdjson_really_inline void log_error(const char *message) const noexcept;
 
-  json_iterator *iter{};
+  value_iterator iter{};
 
   friend class document;
-  template<typename T> friend class array_iterator;
+  friend class array_iterator;
   friend class field;
   friend class object;
   friend struct simdjson_result<value>;
@@ -354,8 +345,8 @@ public:
   simdjson_really_inline operator bool() & noexcept(false);
 #endif
 
-  simdjson_really_inline simdjson_result<SIMDJSON_IMPLEMENTATION::ondemand::array_iterator<SIMDJSON_IMPLEMENTATION::ondemand::value>> begin() & noexcept;
-  simdjson_really_inline simdjson_result<SIMDJSON_IMPLEMENTATION::ondemand::array_iterator<SIMDJSON_IMPLEMENTATION::ondemand::value>> end() & noexcept;
+  simdjson_really_inline simdjson_result<SIMDJSON_IMPLEMENTATION::ondemand::array_iterator> begin() & noexcept;
+  simdjson_really_inline simdjson_result<SIMDJSON_IMPLEMENTATION::ondemand::array_iterator> end() & noexcept;
 };
 
 } // namespace simdjson
