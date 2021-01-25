@@ -10,12 +10,16 @@ simdjson_really_inline value_iterator::value_iterator(json_iterator *json_iter, 
 }
 
 simdjson_warn_unused simdjson_really_inline simdjson_result<bool> value_iterator::start_object() noexcept {
+  // If we're not at the start position anymore, we can't iterate the object (we could be invalidating other iterators!).
+  if (!is_at_start()) { return OUT_OF_ORDER_ITERATION; }
   assert_at_start();
 
   if (*_json_iter->advance() != '{') { logger::log_error(*_json_iter, "Not an object"); return INCORRECT_TYPE; }
   return started_object();
 }
 simdjson_warn_unused simdjson_really_inline simdjson_result<bool> value_iterator::try_start_object() noexcept {
+  // If we're not at the start position anymore, we can't iterate the object (we could be invalidating other iterators!).
+  if (!is_at_start()) { return OUT_OF_ORDER_ITERATION; }
   assert_at_start();
 
   if (*_json_iter->peek() != '{') { logger::log_error(*_json_iter, "Not an object"); return INCORRECT_TYPE; }
@@ -256,6 +260,8 @@ simdjson_warn_unused simdjson_really_inline error_code value_iterator::field_val
 }
 
 simdjson_warn_unused simdjson_really_inline simdjson_result<bool> value_iterator::start_array() noexcept {
+  // If we're not at the start position anymore, we can't iterate the array (we could be invalidating other iterators!).
+  if (!is_at_start()) { return OUT_OF_ORDER_ITERATION; }
   assert_at_start();
 
   if (*_json_iter->advance() != '[') { logger::log_error(*_json_iter, "Not an array"); return INCORRECT_TYPE; }
@@ -263,6 +269,8 @@ simdjson_warn_unused simdjson_really_inline simdjson_result<bool> value_iterator
 }
 
 simdjson_warn_unused simdjson_really_inline simdjson_result<bool> value_iterator::try_start_array() noexcept {
+  // If we're not at the start position anymore, we can't iterate the array (we could be invalidating other iterators!).
+  if (!is_at_start()) { return OUT_OF_ORDER_ITERATION; }
   assert_at_start();
 
   if (*_json_iter->peek() != '[') { logger::log_error(*_json_iter, "Not an array"); return INCORRECT_TYPE; }
