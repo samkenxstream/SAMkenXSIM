@@ -278,8 +278,11 @@ protected:
   simdjson_really_inline bool parse_null(const uint8_t *json) const noexcept;
   simdjson_really_inline simdjson_result<bool> parse_bool(const uint8_t *json) const noexcept;
 
-  simdjson_really_inline const uint8_t *peek_scalar() const noexcept;
-  simdjson_really_inline uint32_t peek_scalar_length() const noexcept;
+  simdjson_really_inline const uint8_t *peek_start() const noexcept;
+  simdjson_really_inline uint32_t peek_start_length() const noexcept;
+  /** Advance if the cursor is at the start. */
+  simdjson_really_inline const uint8_t *advance_start(const char *type) const noexcept;
+  /** Advance if the cursor is *on* the scalar, but not if it isn't. */
   simdjson_really_inline const uint8_t *advance_scalar(const char *type) const noexcept;
   simdjson_really_inline const uint8_t *advance_root_scalar(const char *type) const noexcept;
   simdjson_really_inline const uint8_t *advance_non_root_scalar(const char *type) const noexcept;
