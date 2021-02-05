@@ -271,6 +271,7 @@ simdjson_warn_unused simdjson_really_inline bool value_iterator::started_array()
   }
   logger::log_start_value(*_json_iter, "array");
   _json_iter->descend_to(depth()+1);
+  assert_at_container_start();
   return true;
 }
 
@@ -431,11 +432,11 @@ simdjson_really_inline const uint8_t *value_iterator::advance_container_start(co
   // If we're not at the position anymore, we don't want to advance the cursor.
   if (is_at_start()) {
     auto result = _json_iter->advance();
-    assert_at_container_start();
+    assert_after_start();
     return result;
   } else {
     // NOTE: as before, we are *assuming* we are being used correctly for arrays and objects. Must fix this.
-    assert_at_container_start();
+    assert_after_start();
     return _json_iter->peek();
   }
 }
@@ -479,9 +480,15 @@ simdjson_really_inline bool value_iterator::is_at_start() const noexcept {
   return _json_iter->token.index == _start_position;
 }
 
-simdjson_really_inline void value_iterator::assert_at_container_start() const noexcept {
+simdjson_really_inline void value_iterator::assert_after_start() const noexcept {
   SIMDJSON_ASSUME( _json_iter->token.index == _start_position+1 );
   SIMDJSON_ASSUME( _json_iter->_depth == _depth );
+  SIMDJSON_ASSUME( _depth > 0 );
+}
+
+simdjson_really_inline void value_iterator::assert_at_container_start() const noexcept {
+  SIMDJSON_ASSUME( _json_iter->token.index == _start_position+1 );
+  SIMDJSON_ASSUME( _json_iter->_depth == _depth + 1);
   SIMDJSON_ASSUME( _depth > 0 );
 }
 
