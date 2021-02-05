@@ -10,16 +10,12 @@ simdjson_really_inline value_iterator::value_iterator(json_iterator *json_iter, 
 }
 
 simdjson_warn_unused simdjson_really_inline simdjson_result<bool> value_iterator::start_object() noexcept {
-  assert_at_start();
-
-  if (*_json_iter->advance() != '{') { logger::log_error(*_json_iter, "Not an object"); return INCORRECT_TYPE; }
+  if (*advance_container_start("object") != '{') { logger::log_error(*_json_iter, "Not an object"); return INCORRECT_TYPE; }
   return started_object();
 }
 simdjson_warn_unused simdjson_really_inline simdjson_result<bool> value_iterator::try_start_object() noexcept {
-  assert_at_start();
-
-  if (*_json_iter->peek() != '{') { logger::log_error(*_json_iter, "Not an object"); return INCORRECT_TYPE; }
-  _json_iter->advance();
+  if (*peek_start() != '{') { logger::log_error(*_json_iter, "Not an object"); return INCORRECT_TYPE; }
+  advance_container_start("object");
   return started_object();
 }
 
@@ -256,17 +252,13 @@ simdjson_warn_unused simdjson_really_inline error_code value_iterator::field_val
 }
 
 simdjson_warn_unused simdjson_really_inline simdjson_result<bool> value_iterator::start_array() noexcept {
-  assert_at_start();
-
-  if (*_json_iter->advance() != '[') { logger::log_error(*_json_iter, "Not an array"); return INCORRECT_TYPE; }
+  if (*advance_container_start("array") != '[') { logger::log_error(*_json_iter, "Not an array"); return INCORRECT_TYPE; }
   return started_array();
 }
 
 simdjson_warn_unused simdjson_really_inline simdjson_result<bool> value_iterator::try_start_array() noexcept {
-  assert_at_start();
-
-  if (*_json_iter->peek() != '[') { logger::log_error(*_json_iter, "Not an array"); return INCORRECT_TYPE; }
-  _json_iter->advance();
+  if (*peek_start() != '[') { logger::log_error(*_json_iter, "Not an array"); return INCORRECT_TYPE; }
+  advance_container_start("array");
   return started_array();
 }
 
@@ -434,16 +426,16 @@ simdjson_really_inline uint32_t value_iterator::peek_start_length() const noexce
   return _json_iter->peek_length(_start_position);
 }
 
-simdjson_really_inline const uint8_t *value_iterator::advance_start(const char *type) const noexcept {
+simdjson_really_inline const uint8_t *value_iterator::advance_container_start(const char *type) const noexcept {
   logger::log_value(*_json_iter, _start_position, depth(), type);
   // If we're not at the position anymore, we don't want to advance the cursor.
   if (is_at_start()) {
     auto result = _json_iter->advance();
-    assert_at_start();
+    assert_at_container_start();
     return result;
   } else {
     // NOTE: as before, we are *assuming* we are being used correctly for arrays and objects. Must fix this.
-    assert_at_start();
+    assert_at_container_start();
     return _json_iter->peek();
   }
 }
@@ -485,6 +477,12 @@ simdjson_really_inline error_code value_iterator::incorrect_type_error(const cha
 
 simdjson_really_inline bool value_iterator::is_at_start() const noexcept {
   return _json_iter->token.index == _start_position;
+}
+
+simdjson_really_inline void value_iterator::assert_at_container_start() const noexcept {
+  SIMDJSON_ASSUME( _json_iter->token.index == _start_position+1 );
+  SIMDJSON_ASSUME( _json_iter->_depth == _depth );
+  SIMDJSON_ASSUME( _depth > 0 );
 }
 
 simdjson_really_inline void value_iterator::assert_at_start() const noexcept {

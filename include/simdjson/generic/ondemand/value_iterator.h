@@ -281,7 +281,7 @@ protected:
   simdjson_really_inline const uint8_t *peek_start() const noexcept;
   simdjson_really_inline uint32_t peek_start_length() const noexcept;
   /** Advance if the cursor is at the start. */
-  simdjson_really_inline const uint8_t *advance_start(const char *type) const noexcept;
+  simdjson_really_inline const uint8_t *advance_container_start(const char *type) const noexcept;
   /** Advance if the cursor is *on* the scalar, but not if it isn't. */
   simdjson_really_inline const uint8_t *advance_scalar(const char *type) const noexcept;
   simdjson_really_inline const uint8_t *advance_root_scalar(const char *type) const noexcept;
@@ -291,6 +291,7 @@ protected:
 
   simdjson_really_inline bool is_at_start() const noexcept;
   simdjson_really_inline void assert_at_start() const noexcept;
+  simdjson_really_inline void assert_at_container_start() const noexcept;
   simdjson_really_inline void assert_at_root() const noexcept;
   simdjson_really_inline void assert_at_child() const noexcept;
   simdjson_really_inline void assert_at_next() const noexcept;
