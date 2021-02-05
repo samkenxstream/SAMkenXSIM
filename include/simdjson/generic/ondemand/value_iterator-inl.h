@@ -220,7 +220,8 @@ simdjson_warn_unused simdjson_really_inline simdjson_result<bool> value_iterator
   // beginning of the object.
   // (We have already run through the object before, so we've already validated its structure. We
   // don't check errors in this bit.)
-  _json_iter->reenter_child(_start_position + 1, _depth);
+  _json_iter->token.set_position(_start_position + 1);
+  _json_iter->descend_to(_depth);
 
   has_value = started_object();
   while (_json_iter->position() < search_start) {
