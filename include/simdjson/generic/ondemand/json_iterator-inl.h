@@ -176,12 +176,6 @@ simdjson_really_inline error_code json_iterator::report_error(error_code _error,
 simdjson_really_inline token_position json_iterator::position() const noexcept {
   return token.position();
 }
-simdjson_really_inline void json_iterator::reenter_child(token_position position, depth_t child_depth) noexcept {
-  SIMDJSON_ASSUME(child_depth >= 1 && child_depth < INT32_MAX);
-  SIMDJSON_ASSUME(_depth == child_depth - 1);
-  token.set_position(position);
-  _depth = child_depth;
-}
 
 
 
