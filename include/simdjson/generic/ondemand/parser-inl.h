@@ -8,11 +8,11 @@ simdjson_warn_unused simdjson_really_inline error_code parser::allocate(size_t n
   // string_capacity copied from document::allocate
   size_t string_capacity = SIMDJSON_ROUNDUP_N(5 * new_capacity / 3 + SIMDJSON_PADDING, 64);
   string_buf.reset(new (std::nothrow) uint8_t[string_capacity]);
-  if (implementation) {
-    SIMDJSON_TRY( implementation->set_capacity(new_capacity) );
-    SIMDJSON_TRY( implementation->set_max_depth(new_max_depth) );
+  if (dom_parser) {
+    SIMDJSON_TRY( dom_parser->set_capacity(new_capacity) );
+    SIMDJSON_TRY( dom_parser->set_max_depth(new_max_depth) );
   } else {
-    SIMDJSON_TRY( simdjson::active_implementation->create_dom_parser_implementation(new_capacity, new_max_depth, implementation) );
+    SIMDJSON_TRY( simdjson::active_implementation->create_dom_parser_implementation(new_capacity, new_max_depth, dom_parser) );
   }
   return SUCCESS;
 }
@@ -24,7 +24,7 @@ simdjson_warn_unused simdjson_really_inline simdjson_result<document> parser::it
   }
 
   // Run stage 1.
-  SIMDJSON_TRY( implementation->stage1(reinterpret_cast<const uint8_t *>(buf.data()), buf.size(), false) );
+  SIMDJSON_TRY( dom_parser->stage1(reinterpret_cast<const uint8_t *>(buf.data()), buf.size(), false) );
   return document::start({ reinterpret_cast<const uint8_t *>(buf.data()), this });
 }
 
@@ -42,15 +42,15 @@ simdjson_warn_unused simdjson_really_inline simdjson_result<json_iterator> parse
   }
 
   // Run stage 1.
-  SIMDJSON_TRY( implementation->stage1(reinterpret_cast<const uint8_t *>(buf.data()), buf.size(), false) );
+  SIMDJSON_TRY( dom_parser->stage1(reinterpret_cast<const uint8_t *>(buf.data()), buf.size(), false) );
   return json_iterator(reinterpret_cast<const uint8_t *>(buf.data()), this);
 }
 
 simdjson_really_inline size_t parser::capacity() const noexcept {
-  return implementation ? implementation->capacity() : 0;
+  return dom_parser ? dom_parser->capacity() : 0;
 }
 simdjson_really_inline size_t parser::max_depth() const noexcept {
-  return implementation ? implementation->max_depth() : DEFAULT_MAX_DEPTH;
+  return dom_parser ? dom_parser->max_depth() : DEFAULT_MAX_DEPTH;
 }
 
 

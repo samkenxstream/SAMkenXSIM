@@ -107,8 +107,8 @@ public:
   simdjson_really_inline size_t max_depth() const noexcept;
 
 private:
-  /** @private [for benchmarking access] The implementation to use */
-  std::unique_ptr<internal::dom_parser_implementation> implementation{};
+  /** @private [for benchmarking access] The dom_parser to use */
+  std::unique_ptr<internal::dom_parser_implementation> dom_parser{};
   std::unique_ptr<uint8_t[]> string_buf{};
 
   /**
