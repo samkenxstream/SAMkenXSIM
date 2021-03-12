@@ -368,18 +368,23 @@ simdjson_warn_unused simdjson_really_inline simdjson_result<raw_json_string> val
   return raw_json_string(json+1);
 }
 simdjson_warn_unused simdjson_really_inline simdjson_result<uint64_t> value_iterator::get_uint64() noexcept {
+  if (depth() <= 1) { return get_root_uint64(); }
   return numberparsing::parse_unsigned(advance_non_root_scalar("uint64"));
 }
 simdjson_warn_unused simdjson_really_inline simdjson_result<int64_t> value_iterator::get_int64() noexcept {
+  if (depth() <= 1) { return get_root_int64(); }
   return numberparsing::parse_integer(advance_non_root_scalar("int64"));
 }
 simdjson_warn_unused simdjson_really_inline simdjson_result<double> value_iterator::get_double() noexcept {
+  if (depth() <= 1) { return get_root_double(); }
   return numberparsing::parse_double(advance_non_root_scalar("double"));
 }
 simdjson_warn_unused simdjson_really_inline simdjson_result<bool> value_iterator::get_bool() noexcept {
+  if (depth() <= 1) { return get_root_bool(); }
   return parse_bool(advance_non_root_scalar("bool"));
 }
 simdjson_really_inline bool value_iterator::is_null() noexcept {
+  if (depth() <= 1) { return is_root_null(); }
   return parse_null(advance_non_root_scalar("null"));
 }
 
