@@ -61,9 +61,9 @@ namespace array_error_tests {
   bool top_level_array_iterate_error() {
     TEST_START();
     ONDEMAND_SUBTEST("missing comma", "[1 1]",  assert_iterate(doc, { int64_t(1) }, { TAPE_ERROR }));
-    ONDEMAND_SUBTEST("extra comma  ", "[1,,1]", assert_iterate(doc, { int64_t(1) }, { INCORRECT_TYPE, TAPE_ERROR }));
-    ONDEMAND_SUBTEST("extra comma  ", "[,]",    assert_iterate(doc,                 { INCORRECT_TYPE }));
-    ONDEMAND_SUBTEST("extra comma  ", "[,,]",   assert_iterate(doc,                 { INCORRECT_TYPE, INCORRECT_TYPE, TAPE_ERROR }));
+    ONDEMAND_SUBTEST("extra comma  ", "[1,,1]", assert_iterate(doc, { int64_t(1) }, { TAPE_ERROR, TAPE_ERROR }));
+    ONDEMAND_SUBTEST("extra comma  ", "[,]",    assert_iterate(doc,                 { TAPE_ERROR, TAPE_ERROR }));
+    ONDEMAND_SUBTEST("extra comma  ", "[,,]",   assert_iterate(doc,                 { TAPE_ERROR, TAPE_ERROR }));
     TEST_SUCCEED();
   }
   bool top_level_array_iterate_unclosed_error() {
@@ -80,10 +80,10 @@ namespace array_error_tests {
   bool array_iterate_error() {
     TEST_START();
     ONDEMAND_SUBTEST("missing comma", R"({ "a": [1 1] })",  assert_iterate(doc["a"], { int64_t(1) }, { TAPE_ERROR }));
-    ONDEMAND_SUBTEST("extra comma  ", R"({ "a": [1,,1] })", assert_iterate(doc["a"], { int64_t(1) }, { INCORRECT_TYPE, TAPE_ERROR }));
-    ONDEMAND_SUBTEST("extra comma  ", R"({ "a": [1,,] })",  assert_iterate(doc["a"], { int64_t(1) }, { INCORRECT_TYPE }));
-    ONDEMAND_SUBTEST("extra comma  ", R"({ "a": [,] })",    assert_iterate(doc["a"],                 { INCORRECT_TYPE }));
-    ONDEMAND_SUBTEST("extra comma  ", R"({ "a": [,,] })",   assert_iterate(doc["a"],                 { INCORRECT_TYPE, INCORRECT_TYPE, TAPE_ERROR }));
+    ONDEMAND_SUBTEST("extra comma  ", R"({ "a": [1,,1] })", assert_iterate(doc["a"], { int64_t(1) }, { TAPE_ERROR, TAPE_ERROR }));
+    ONDEMAND_SUBTEST("extra comma  ", R"({ "a": [1,,] })",  assert_iterate(doc["a"], { int64_t(1) }, { TAPE_ERROR, TAPE_ERROR }));
+    ONDEMAND_SUBTEST("extra comma  ", R"({ "a": [,] })",    assert_iterate(doc["a"],                 { TAPE_ERROR, TAPE_ERROR }));
+    ONDEMAND_SUBTEST("extra comma  ", R"({ "a": [,,] })",   assert_iterate(doc["a"],                 { TAPE_ERROR, TAPE_ERROR }));
     TEST_SUCCEED();
   }
   bool array_iterate_unclosed_error() {
@@ -102,12 +102,12 @@ namespace array_error_tests {
     TEST_START();
   #if __SIMDJSON_CHECK_EOF
     ONDEMAND_SUBTEST("unclosed after array", R"([ [1] )", assert_iterate(doc.get_array().at(0), { int64_t(1) }, { INCOMPLETE_ARRAY_OR_OBJECT }));
-    ONDEMAND_SUBTEST("unclosed after array", R"([ [1,])", assert_iterate(doc.get_array().at(0), { int64_t(1) }, { INCORRECT_TYPE, TAPE_ERROR }));
+    ONDEMAND_SUBTEST("unclosed after array", R"([ [1,])", assert_iterate(doc.get_array().at(0), { int64_t(1) }, { TAPE_ERROR, TAPE_ERROR }));
     ONDEMAND_SUBTEST("unclosed after array", R"([ [1])",  assert_iterate(doc.get_array().at(0), { int64_t(1) }, { INCOMPLETE_ARRAY_OR_OBJECT }));
     ONDEMAND_SUBTEST("unclosed after array", R"([ [])",   assert_iterate(doc.get_array().at(0),                 { INCOMPLETE_ARRAY_OR_OBJECT }));
   #else
     ONDEMAND_SUBTEST("unclosed after array", R"({ "a": [1] )",        assert_iterate(doc["a"], { int64_t(1) }                                ));
-    ONDEMAND_SUBTEST("unclosed after array", R"({ "a": [1,])",        assert_iterate(doc["a"], { int64_t(1) }, { INCORRECT_TYPE, TAPE_ERROR }));
+    ONDEMAND_SUBTEST("unclosed after array", R"({ "a": [1,])",        assert_iterate(doc["a"], { int64_t(1) }, { TAPE_ERROR, TAPE_ERROR }));
     ONDEMAND_SUBTEST("unclosed after array", R"({ "a": [1])",         assert_iterate(doc["a"], { int64_t(1) }                                ));
     ONDEMAND_SUBTEST("unclosed after array", R"({ "a": [])",          assert_iterate(doc["a"],                                               ));
   #endif

@@ -61,6 +61,8 @@ inline simdjson::error_code string_builder<serializer>::append(document& element
     case ondemand::json_type::null:
       format.null_atom();
       return simdjson::SUCCESS;
+    default:
+      SIMDJSON_UNREACHABLE();
   }
   return simdjson::INCORRECT_TYPE;
 }

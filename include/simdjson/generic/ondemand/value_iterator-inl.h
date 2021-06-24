@@ -423,11 +423,11 @@ simdjson_warn_unused simdjson_really_inline simdjson_result<bool> value_iterator
   }
 }
 
-simdjson_warn_unused simdjson_really_inline simdjson_result<bool> value_iterator::parse_bool(const uint8_t *json) const noexcept {
+simdjson_warn_unused simdjson_really_inline simdjson_result<bool> value_iterator::parse_bool(const uint8_t *json) noexcept {
   auto not_true = atomparsing::str4ncmp(json, "true");
   auto not_false = atomparsing::str4ncmp(json, "fals") | (json[4] ^ 'e');
   bool error = (not_true && not_false) || jsoncharutils::is_not_structural_or_whitespace(json[not_true ? 5 : 4]);
-  if (error) { return incorrect_type_error("Not a boolean"); }
+  if (error) { return incorrect_type_error(json, "Not a boolean"); }
   return simdjson_result<bool>(!not_true);
 }
 simdjson_really_inline bool value_iterator::parse_null(const uint8_t *json) const noexcept {
@@ -439,23 +439,30 @@ simdjson_warn_unused simdjson_really_inline simdjson_result<std::string_view> va
 }
 simdjson_warn_unused simdjson_really_inline simdjson_result<raw_json_string> value_iterator::get_raw_json_string() noexcept {
   auto json = advance_scalar("string");
-  if (*json != '"') { return incorrect_type_error("Not a string"); }
+  if (*json != '"') { return incorrect_type_error(json, "Not a string"); }
   return raw_json_string(json+1);
 }
 simdjson_warn_unused simdjson_really_inline simdjson_result<uint64_t> value_iterator::get_uint64() noexcept {
-  return numberparsing::parse_unsigned(advance_non_root_scalar("uint64"));
+  auto result = numberparsing::parse_unsigned(advance_non_root_scalar("uint64"));
+  if (result.error() == INCORRECT_TYPE) { return incorrect_type_error(peek_start(), "Not a uint64"); }
+  return result;
 }
 simdjson_warn_unused simdjson_really_inline simdjson_result<int64_t> value_iterator::get_int64() noexcept {
-  return numberparsing::parse_integer(advance_non_root_scalar("int64"));
+  auto result = numberparsing::parse_integer(advance_non_root_scalar("int64"));
+  if (result.error() == INCORRECT_TYPE) { return incorrect_type_error(peek_start(), "Not an int64"); }
+  return result;
 }
 simdjson_warn_unused simdjson_really_inline simdjson_result<double> value_iterator::get_double() noexcept {
-  return numberparsing::parse_double(advance_non_root_scalar("double"));
+  auto result = numberparsing::parse_double(advance_non_root_scalar("double"));
+  if (result.error() == INCORRECT_TYPE) { return incorrect_type_error(peek_start(), "Not a double"); }
+  return result;
 }
 simdjson_warn_unused simdjson_really_inline simdjson_result<bool> value_iterator::get_bool() noexcept {
   return parse_bool(advance_non_root_scalar("bool"));
 }
 simdjson_really_inline bool value_iterator::is_null() noexcept {
-  return parse_null(advance_non_root_scalar("null"));
+  logger::log_value(*_json_iter, start_position(), depth(), "null");
+  return parse_null(peek_start());
 }
 
 constexpr const uint32_t MAX_INT_LENGTH = 1024;
@@ -503,12 +510,13 @@ simdjson_warn_unused simdjson_really_inline simdjson_result<bool> value_iterator
   auto max_len = peek_start_length();
   auto json = advance_root_scalar("bool");
   uint8_t tmpbuf[5+1];
-  if (!_json_iter->copy_to_buffer(json, max_len, tmpbuf)) { return incorrect_type_error("Not a boolean"); }
+  if (!_json_iter->copy_to_buffer(json, max_len, tmpbuf)) { return incorrect_type_error(json, "Not a boolean"); }
   return parse_bool(tmpbuf);
 }
 simdjson_really_inline bool value_iterator::is_root_null() noexcept {
   auto max_len = peek_start_length();
-  auto json = advance_root_scalar("null");
+  logger::log_value(*_json_iter, start_position(), depth(), "null");
+  auto json = peek_start();
   return max_len >= 4 && !atomparsing::str4ncmp(json, "null") &&
          (max_len == 4 || jsoncharutils::is_structural_or_whitespace(json[5]));
 }
@@ -602,7 +610,7 @@ simdjson_really_inline error_code value_iterator::start_container(uint8_t start_
   }
 
   // Get the JSON and advance the cursor
-  if (*json != start_char) { return incorrect_type_error(incorrect_type_message); }
+  if (*json != start_char) { return incorrect_type_error(json, incorrect_type_message); }
   return SUCCESS;
 }
 
@@ -625,7 +633,9 @@ simdjson_really_inline const uint8_t *value_iterator::advance_non_root_scalar(co
   return result;
 }
 
-simdjson_really_inline error_code value_iterator::incorrect_type_error(const char *message) const noexcept {
+simdjson_really_inline error_code value_iterator::incorrect_type_error(const uint8_t *json, const char *message) noexcept {
+  // Make sure it's not a permanent error: it must be a value char, not {[,:]}
+  if (jsoncharutils::is_structural_or_whitespace(*json)) { return report_error(TAPE_ERROR, "Structural instead of value"); }
   logger::log_error(*_json_iter, start_position(), depth(), message);
   return INCORRECT_TYPE;
 }
