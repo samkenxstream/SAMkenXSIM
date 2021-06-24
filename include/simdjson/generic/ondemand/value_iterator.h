@@ -113,12 +113,23 @@ public:
   /**
    * Start an object iteration after the user has already checked and moved past the {.
    *
-   * Does not move the iterator.
+   * Does not move the iterator unless the object is empty ({}).
    *
    * @returns Whether the object had any fields (returns false for empty).
-   * @error TAPE_ERROR If there are not enough tokens remaining to have a key, :, and value.
+   * @error INCOMPLETE_ARRAY_OR_OBJECT If there are no more tokens (implying the *parent*
+   *        array or object is incomplete).
    */
   simdjson_warn_unused simdjson_really_inline simdjson_result<bool> started_object() noexcept;
+  /**
+   * Start an object iteration from the root, after the user has already checked and moved past the {.
+   *
+   * Does not move the iterator unless the object is empty ({}).
+   *
+   * @returns Whether the object had any fields (returns false for empty).
+   * @error INCOMPLETE_ARRAY_OR_OBJECT If there are no more tokens (implying the *parent*
+   *        array or object is incomplete).
+   */
+  simdjson_warn_unused simdjson_really_inline simdjson_result<bool> started_root_object() noexcept;
 
   /**
    * Moves to the next field in an object.
@@ -225,13 +236,25 @@ public:
   simdjson_warn_unused simdjson_really_inline simdjson_result<bool> start_root_array() noexcept;
 
   /**
-   * Start an array iteration after the user has already checked and moved past the [.
+   * Start an array iteration, after the user has already checked and moved past the [.
    *
-   * Does not move the iterator.
+   * Does not move the iterator unless the array is empty ([]).
    *
    * @returns Whether the array had any elements (returns false for empty).
+   * @error INCOMPLETE_ARRAY_OR_OBJECT If there are no more tokens (implying the *parent*
+   *        array or object is incomplete).
    */
-  simdjson_warn_unused simdjson_really_inline bool started_array() noexcept;
+  simdjson_warn_unused simdjson_really_inline simdjson_result<bool> started_array() noexcept;
+  /**
+   * Start an array iteration from the root, after the user has already checked and moved past the [.
+   *
+   * Does not move the iterator unless the array is empty ([]).
+   *
+   * @returns Whether the array had any elements (returns false for empty).
+   * @error INCOMPLETE_ARRAY_OR_OBJECT If there are no more tokens (implying the *parent*
+   *        array or object is incomplete).
+   */
+  simdjson_warn_unused simdjson_really_inline simdjson_result<bool> started_root_array() noexcept;
 
   /**
    * Moves to the next element in an array.
@@ -300,10 +323,12 @@ protected:
 
   simdjson_really_inline const uint8_t *peek_start() const noexcept;
   simdjson_really_inline uint32_t peek_start_length() const noexcept;
-  simdjson_really_inline const uint8_t *advance_start(const char *type) noexcept;
-  simdjson_really_inline error_code advance_container_start(const char *type, const uint8_t *&json) noexcept;
+  simdjson_really_inline const uint8_t *advance_scalar(const char *type) noexcept;
   simdjson_really_inline const uint8_t *advance_root_scalar(const char *type) noexcept;
   simdjson_really_inline const uint8_t *advance_non_root_scalar(const char *type) noexcept;
+
+  simdjson_really_inline error_code start_container(uint8_t start_char, const char *incorrect_type_message, const char *type) noexcept;
+  simdjson_really_inline error_code end_container() noexcept;
 
   /**
    * Advance to a place expecting a value (increasing depth).

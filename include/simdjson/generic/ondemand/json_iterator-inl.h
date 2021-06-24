@@ -28,7 +28,7 @@ simdjson_really_inline json_iterator::json_iterator(const uint8_t *buf, ondemand
     _depth{1}
 {
   logger::log_headers();
-  assert_more_tokens(1);
+  assert_more_tokens();
 }
 
 inline void json_iterator::rewind() noexcept {
@@ -46,7 +46,6 @@ SIMDJSON_DISABLE_STRICT_OVERFLOW_WARNING
 simdjson_warn_unused simdjson_really_inline error_code json_iterator::skip_child(depth_t parent_depth) noexcept {
   if (depth() <= parent_depth) { return SUCCESS; }
 
-  SIMDJSON_TRY( require_tokens(1) );
   switch (*advance()) {
     // TODO consider whether matching braces is a requirement: if non-matching braces indicates
     // *missing* braces, then future lookups are not in the object/arrays they think they are,
@@ -66,6 +65,10 @@ simdjson_warn_unused simdjson_really_inline error_code json_iterator::skip_child
     // ] or } means we just finished a value and need to jump out of the array/object
     case ']': case '}':
       logger::log_end_value(*this, "skip");
+#if __SIMDJSON_CHECK_EOF
+      // If there are no more tokens, the parent is incomplete.
+      if (at_end()) { return report_error(INCOMPLETE_ARRAY_OR_OBJECT, "Missing [ or { at start"); }
+#endif // __SIMDJSON_CHECK_EOF
       _depth--;
       if (depth() <= parent_depth) { return SUCCESS; }
       break;
@@ -136,7 +139,7 @@ simdjson_really_inline void json_iterator::assert_at_root() const noexcept {
 }
 
 simdjson_really_inline void json_iterator::assert_more_tokens(uint32_t required_tokens) const noexcept {
-  assert_valid_position(token.position() + required_tokens - 1);
+  assert_valid_position(token._position + required_tokens - 1);
 }
 
 simdjson_really_inline void json_iterator::assert_valid_position(token_position position) const noexcept {
@@ -176,23 +179,6 @@ simdjson_really_inline void json_iterator::abandon() noexcept {
 simdjson_really_inline const uint8_t *json_iterator::advance() noexcept {
   assert_more_tokens();
   return token.advance();
-}
-
-simdjson_really_inline simdjson_result<const uint8_t *> json_iterator::try_advance(uint32_t required_tokens) noexcept {
-  const uint8_t *json = token.advance();
-  // Check this *after* we get the pointer, since getting the pointer is more time-sensitive than the branch.
-  // Also resolves nicely to 0 in the common case of required_tokens == 1.
-  SIMDJSON_TRY( require_tokens(required_tokens - 1) );
-  return json;
-}
-
-simdjson_really_inline error_code json_iterator::require_tokens(simdjson_unused uint32_t required_tokens) noexcept {
-#if __SIMDJSON_CHECK_EOF
-  if (position() + required_tokens > end_position()) {
-    return report_error(TAPE_ERROR, "Document ended early");
-  }
-#endif
-  return SUCCESS;
 }
 
 simdjson_really_inline const uint8_t *json_iterator::peek(int32_t delta) const noexcept {

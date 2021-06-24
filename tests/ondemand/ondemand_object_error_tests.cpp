@@ -61,11 +61,20 @@ namespace object_error_tests {
   }
   bool object_iterate_unclosed_error() {
     TEST_START();
-    ONDEMAND_SUBTEST("unclosed", R"({ "a": 1,         )",    assert_iterate_object(doc.get_object(), { TAPE_ERROR }));
-    ONDEMAND_SUBTEST("unclosed", R"({ "a": 1          )",    assert_iterate_object(doc.get_object(), { TAPE_ERROR }));
-    ONDEMAND_SUBTEST("unclosed", R"({ "a":            )",    assert_iterate_object(doc.get_object(), { TAPE_ERROR }));
-    ONDEMAND_SUBTEST("unclosed", R"({ "a"             )",    assert_iterate_object(doc.get_object(), { TAPE_ERROR }));
-    ONDEMAND_SUBTEST("unclosed", R"({                 )",    assert_iterate_object(doc.get_object(), { TAPE_ERROR }));
+    ONDEMAND_SUBTEST("unclosed", R"({ "a": 1,         )",    assert_iterate_object(doc.get_object(), { INCOMPLETE_ARRAY_OR_OBJECT }));
+    ONDEMAND_SUBTEST("unclosed", R"({ "a": 1          )",    assert_iterate_object(doc.get_object(), { INCOMPLETE_ARRAY_OR_OBJECT }));
+    ONDEMAND_SUBTEST("unclosed", R"({ "a":            )",    assert_iterate_object(doc.get_object(), { INCOMPLETE_ARRAY_OR_OBJECT }));
+    ONDEMAND_SUBTEST("unclosed", R"({ "a"             )",    assert_iterate_object(doc.get_object(), { INCOMPLETE_ARRAY_OR_OBJECT }));
+    ONDEMAND_SUBTEST("unclosed", R"({                 )",    assert_iterate_object(doc.get_object(), { INCOMPLETE_ARRAY_OR_OBJECT }));
+    TEST_SUCCEED();
+  }
+  bool object_iterate_incomplete_error() {
+    TEST_START();
+    ONDEMAND_SUBTEST("unclosed", R"({ "x": { "a": 1, })",    assert_iterate_object(doc.get_object(), { "a" }, { int64_t(1) }, { TAPE_ERROR }));
+    ONDEMAND_SUBTEST("unclosed", R"({ "x": { "a": 1  })",    assert_iterate_object(doc.get_object(), { "a" }, { int64_t(1) }, { INCOMPLETE_ARRAY_OR_OBJECT }));
+    ONDEMAND_SUBTEST("unclosed", R"({ "x": { "a":    })",    assert_iterate_object(doc.get_object(), { INCORRECT_TYPE, INCOMPLETE_ARRAY_OR_OBJECT }));
+    ONDEMAND_SUBTEST("unclosed", R"({ "x": { "a"     })",    assert_iterate_object(doc.get_object(), { INCOMPLETE_ARRAY_OR_OBJECT }));
+    ONDEMAND_SUBTEST("unclosed", R"({ "x": {         })",    assert_iterate_object(doc.get_object(), { INCOMPLETE_ARRAY_OR_OBJECT }));
     TEST_SUCCEED();
   }
 
