@@ -87,5 +87,9 @@
         "*.ipp": "cpp",
         "__functional_base_03": "cpp",
         "filesystem": "cpp"
-    }
+    },
+    "cmake.configureSettings": {
+        "SIMDJSON_DEVELOPER_MODE": "ON"
+    },
+    "cmake.configureOnOpen": true,
 }
